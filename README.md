@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-# sales-kanvas-be
-
 ## Setup
 
 ```bash
