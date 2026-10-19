@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # sales-kanvas-be
 
 ## Setup
@@ -47,11 +48,7 @@ src/
 
 ## Format response
 
-Semua response sukses dibungkus `ResponseInterceptor`:
-
-```json
-{ "success": true, "message": "…", "data": {}, "statusCode": 200 }
-```
+Semua response sukses dibungkus `ResponseInterceptor`
 
 Error dinormalisasi oleh `AllExceptionsFilter` (termasuk error validasi Zod) dan `PrismaExceptionFilter`.
 
@@ -93,3 +90,6 @@ Semua di bawah prefix `/api`, semuanya butuh Bearer token.
 | `/master/product`              | login             | `product:write`              | `product:write`              |
 | `/master/vehicle`              | login             | `vehicle:write`              | `vehicle:write`              |
 | `/master/kasbon-material-type` | login             | `kasbon-material-type:write` | `kasbon-material-type:write` |
+=======
+# sales_kanvas_mubarok
+>>>>>>> ad7774f5ae51ddd00a88a933ec6b8920fd156341
