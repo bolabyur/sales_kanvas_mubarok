@@ -16,7 +16,7 @@ import { PermissionsGuard } from '../../common/guards/permission.guard';
 import { Authenticated } from '../../common/decorators/authenticated.decorator';
 import { RequirePermission } from '../../common/decorators/require-permission.decorator';
 import { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
-import { CreateProductDto, UpdateProductDto } from './product.dto';
+import { CreateProductDto, UpdateProductDto } from './dto/product.dto';
 import { ProductService } from './product.service';
 
 @Controller('master/product')

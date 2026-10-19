@@ -10,11 +10,29 @@ import { ProductModule } from './master/product/product.module';
 import { EmployeeModule } from './master/employee/employee.module';
 import { KasbonMaterialTypeModule } from './master/kasbon-material-type/kasbon-material-type.module';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
+import { OutletModule } from './master/outlet/outlet.module';
+import { BatchModule } from './master/batch/batch.module';
+import { TipeHargaModule } from './master/tipe-harga/tipe-harga.module';
+import { InvoiceModule } from './transaksi/invoice/invoice.module';
+import { KasbonProdukModule } from './transaksi/kasbon-produk/kasbon-produk.module';
+import { ProdukOutModule } from './transaksi/produk-out/produk-out.module';
+import { KasbonOperasionalModule } from './transaksi/kasbon-operasional/kasbon-operasional.module';
+import { ProdukInModule } from './transaksi/produk-in/produk-in.module';
+import { SettlementModule } from './transaksi/settlement/settlement.module';
+import { GudangModule } from './master/gudang/gudang.module';
+import { PlanOutletModule } from './transaksi/plan-outlet/plan-outlet.module';
+import { ReturModule } from './transaksi/retur/retur.module';
+import { ProdukHargaModule } from './master/produk-harga/produk-harga.module';
+import { PembayaranModule } from './transaksi/pembayaran/pembayaran.module';
+
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,
+    OutletModule,
+    TipeHargaModule,
+    BatchModule,
     AuthModule,
     PlanModule,
     VehicleModule,
@@ -22,6 +40,17 @@ import { ResponseInterceptor } from './common/interceptors/response.interceptor'
     ProductModule,
     EmployeeModule,
     KasbonMaterialTypeModule,
+    InvoiceModule,
+    KasbonProdukModule,
+    ProdukOutModule,
+    KasbonOperasionalModule,
+    ProdukInModule,
+    SettlementModule,
+    GudangModule,
+    PlanOutletModule,
+    ReturModule,
+    ProdukHargaModule,
+    PembayaranModule,
   ],
   providers: [{ provide: APP_INTERCEPTOR, useClass: ResponseInterceptor }],
 })

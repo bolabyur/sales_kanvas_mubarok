@@ -3,6 +3,7 @@ import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import * as bcrypt from "bcrypt";
 import * as pg from "pg";
+import { read, write } from "fs";
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
@@ -20,7 +21,42 @@ async function main() {
   const sales = await prisma.role.findUniqueOrThrow({
     where: { name: "Sales" },
   });
-  for (const name of ["plan:read", "plan:write"]) {
+  for (const name of [
+    "plan:read",
+    "plan:write",
+    "market-area:write",
+    "vehicle:write",
+    "product:write",
+    "employee:write",
+    "outlet:read",
+    "outlet:write",
+    "tipe-harga:read",
+    "tipe-harga:write",
+    "batch:read",
+    "batch:write",
+    "invoice:write",
+    "invoice:read",
+    "kasbon-produk:write", 
+    "kasbon-produk:read",
+    "produk-out:write", 
+    "produk-out:read",
+    "kasbon-operasional:write", 
+    "kasbon-operasional:read",
+    "produk-in:write", 
+    "produk-in:read",
+    "settlement:write", 
+    "settlement:read",
+    "gudang:read", 
+    "gudang:write", 
+    "produk-harga:read",
+    "produk-harga:write", 
+    "plan-outlet:read", 
+    "plan-outlet:write", 
+    "retur:read", 
+    "retur:write",
+    "pembayaran:write",
+    "pembayaran:seed"
+  ]) {
     const perm = await prisma.permission.upsert({
       where: { name },
       update: {},
