@@ -6,7 +6,6 @@ import { CreateProductDto, UpdateProductDto } from './dto/product.dto';
 export class ProductService {
   constructor(private readonly prisma: PrismaService) {}
 
-  // List hanya produk aktif (untuk dropdown); detail by id tetap bisa semua.
   findAll() {
     return this.prisma.product.findMany({
       where: { is_active: true },
@@ -31,8 +30,6 @@ export class ProductService {
     });
   }
 
-  // Ditolak (400 Invalid reference) bila sudah dipakai plan — nonaktifkan
-  // lewat PATCH { is_active: false } sebagai gantinya.
   remove(id: number) {
     return this.prisma.product.delete({ where: { id } });
   }

@@ -4,7 +4,7 @@ import { InvoiceController } from './invoice.controller';
 import { PrismaModule } from '../../prisma/prisma.module';
 
 @Module({
-  imports: [PrismaModule], // Wajib ditambahkan
+  imports: [PrismaModule],
   controllers: [InvoiceController],
   providers: [InvoiceService],
 })

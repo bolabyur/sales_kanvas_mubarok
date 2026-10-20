@@ -52,7 +52,6 @@ export class SettlementService {
         },
       });
 
-      // Ubah status Plan menjadi Settled (BR-03)
       await tx.salesKanvasPlan.update({
         where: { id: plan.id },
         data: { status: 'Settled' },

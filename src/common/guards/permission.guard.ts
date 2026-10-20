@@ -43,7 +43,7 @@ export class PermissionsGuard implements CanActivate {
     }
 
     if (!requiredPermissions?.length) {
-      return true; // @Authenticated() saja — cukup login
+      return true;
     }
 
     if (this.isSuperAdmin(user)) {

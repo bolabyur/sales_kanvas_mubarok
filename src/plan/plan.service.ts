@@ -14,19 +14,16 @@ export class PlanService {
   constructor(private prisma: PrismaService) {}
 
   async create(data: CreatePlanDto, userId: number, ip: string) {
-    // 1. Validasi Relasi
     const market = await this.prisma.marketArea.findUnique({ where: { id: data.market_area_id } });
     if (!market) throw new BadRequestException('Market Area ID tidak ditemukan');
     
     const vehicle = await this.prisma.vehicele.findUnique({ where: { id: data.vehicle_id } });
     if (!vehicle) throw new BadRequestException('Kendaraan ID tidak ditemukan');
 
-    // 2. Buat Invoice otomatis
     const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
     const count = await this.prisma.salesKanvasPlan.count();
     const invoice = `SKS-${dateStr}-${(count + 1).toString().padStart(4, '0')}`;
 
-    // 3. SUNTIKKAN user_id dan ip ke dalam nested array (Memperbaiki Error 1 & 2)
     const personils = data.salesKanvasPersonil.map(p => ({
       ...p,
       user_id: userId,
@@ -39,7 +36,6 @@ export class PlanService {
       ip: ip,
     }));
 
-    // 4. Simpan ke database
     return this.prisma.salesKanvasPlan.create({
       data: {
         invoice,
@@ -53,13 +49,13 @@ export class PlanService {
         user_id: userId,
         ip: ip,
         salesKanvasPersonil: {
-          create: personils, // Gunakan array yang sudah disuntik
+          create: personils, 
         },
         salesKanvasPlanDetail: {
           create: data.salesKanvasPlanDetail,
         },
         salesKanvasKasbonMaterial: materials ? {
-          create: materials, // Gunakan array yang sudah disuntik
+          create: materials, 
         } : undefined,
       },
       include: {
@@ -74,7 +70,6 @@ export class PlanService {
     const limit = Number(query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    // Memperbaiki Error 3: Hapus is_deleted: false karena kolomnya tidak ada di schema Plan
     const where: Prisma.SalesKanvasPlanWhereInput = {}; 
     
     if (query.search) where.invoice = { contains: query.search, mode: 'insensitive' };
@@ -128,7 +123,6 @@ export class PlanService {
   async update(id: number, data: UpdatePlanDto, userId: number, ip: string) {
     await this.findOne(id);
     
-    // Memperbaiki Error 4: Gunakan UncheckedUpdateInput dan petakan datanya satu per satu
     const updateData: Prisma.SalesKanvasPlanUncheckedUpdateInput = {
       user_id: userId,
       ip: ip,
@@ -143,7 +137,7 @@ export class PlanService {
 
     return this.prisma.salesKanvasPlan.update({
       where: { id },
-      data: updateData, // Kirim data yang sudah bersih
+      data: updateData, 
     });
   }
 

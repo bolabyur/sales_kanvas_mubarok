@@ -34,7 +34,6 @@ export class GudangService {
 
   async remove(id: number) {
     await this.findOne(id);
-    // Soft Delete
     return this.prisma.gudang.update({
       where: { id },
       data: { is_deleted: true },

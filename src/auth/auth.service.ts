@@ -80,7 +80,6 @@ export class AuthService {
 
     const isTokenValid = await bcrypt.compare(token, user.refresh_token);
     if (!isTokenValid) {
-      // token lama dipakai ulang -> kemungkinan dicuri, revoke sesi
       await this.revokeRefreshToken(user.id);
       throw new UnauthorizedException(AUTH.REFRESH_TOKEN_REUSE_DETECTED);
     }

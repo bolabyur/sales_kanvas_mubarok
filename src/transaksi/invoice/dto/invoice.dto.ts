@@ -4,7 +4,7 @@ import { z } from 'zod';
 export const createInvoiceSchema = z.object({
   outlet_id: z.number().int(),
   sales_kanvas_plan_id: z.number().int(),
-  tipe_pembayaran: z.enum(['Tunai', 'Kredit', 'TOP']),
+  tipe_pembayaran: z.enum(['Tunai', 'Kredit']),
   tgl_invoice: z.string().datetime(),
   details: z.array(
     z.object({

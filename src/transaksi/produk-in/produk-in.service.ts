@@ -33,7 +33,6 @@ export class ProdukInService {
           },
         });
 
-        // Hanya tambah stok jika kondisi Bagus
         if (item.kondisi === 'Bagus') {
           await tx.batch.update({
             where: { id: item.batch_id },

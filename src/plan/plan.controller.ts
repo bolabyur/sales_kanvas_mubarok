@@ -23,7 +23,6 @@ export class PlanController {
     @Body() dto: CreatePlanDto,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    // Karena ip.decorator hilang, kita hardcode dulu ip-nya atau sesuaikan di service
     return this.planService.create(dto, user.id, '127.0.0.1'); 
   }
 

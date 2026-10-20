@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateVehicleDto, UpdateVehicleDto } from './vehicle.dto';
 
-// ponytail: list tanpa paging (data kecil, untuk dropdown).
 @Injectable()
 export class VehicleService {
   constructor(private readonly prisma: PrismaService) {}
@@ -28,7 +27,6 @@ export class VehicleService {
     });
   }
 
-  // Ditolak (400 Invalid reference) bila sudah dipakai plan.
   remove(id: number) {
     return this.prisma.vehicele.delete({ where: { id } });
   }

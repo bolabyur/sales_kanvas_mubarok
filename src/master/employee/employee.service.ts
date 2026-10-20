@@ -6,7 +6,6 @@ import { CreateEmployeeDto, UpdateEmployeeDto } from './employee.dto';
 export class EmployeeService {
   constructor(private readonly prisma: PrismaService) {}
 
-  // List hanya karyawan aktif (untuk dropdown); detail by id tetap bisa semua.
   findAll() {
     return this.prisma.employee.findMany({
       where: { is_active: true },

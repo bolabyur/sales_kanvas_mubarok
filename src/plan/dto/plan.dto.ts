@@ -6,7 +6,7 @@ export const PLAN_STATUS = {
   APPROVED: 'Approved',
   ON_TRIP: 'On-Trip',
   SETTLED: 'Settled',
-  BATAL: 'Batal', // <-- Memperbaiki error 'BATAL'
+  BATAL: 'Batal', 
 };
 
 export const createPlanSchema = z.object({
@@ -47,7 +47,6 @@ export const updateStatusPlanSchema = z.object({
 });
 export class UpdateStatusPlanDto extends createZodDto(updateStatusPlanSchema) {}
 
-// Memperbaiki error FindAllPlanDto (menambahkan field filter & sort)
 export const findAllPlanSchema = z.object({
   page: z.string().optional(),
   limit: z.string().optional(),

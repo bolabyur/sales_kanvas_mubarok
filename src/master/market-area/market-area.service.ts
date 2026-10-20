@@ -27,7 +27,6 @@ export class MarketAreaService {
     });
   }
 
-  // Ditolak (400 Invalid reference) bila sudah dipakai plan.
   remove(id: number) {
     return this.prisma.marketArea.delete({ where: { id } });
   }

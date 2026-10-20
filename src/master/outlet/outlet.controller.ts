@@ -15,7 +15,6 @@ export class OutletController {
 
   @Post()
   @RequirePermission('outlet:write')
-  // Cukup gunakan @Body() biasa, tidak perlu ZodValidationPipe manual lagi
   create(@Body() createOutletDto: CreateOutletDto) {
     return this.outletService.create(createOutletDto);
   }

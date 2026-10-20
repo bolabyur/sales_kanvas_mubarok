@@ -4,9 +4,9 @@ import { createZodDto } from 'nestjs-zod';
 const vehicleSchema = z
   .object({
     name: z.string().min(1),
-    type_vehicle: z.string().min(1), // truk, bus
+    type_vehicle: z.string().min(1), 
     nopol: z.string().min(1),
-    type_fuel: z.string().min(1), // bensin, solar
+    type_fuel: z.string().min(1), 
   })
   .strict();
 

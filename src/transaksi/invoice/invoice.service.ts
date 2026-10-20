@@ -8,7 +8,7 @@ export class InvoiceService {
 
   async create(data: CreateInvoiceDto) {
     return this.prisma.$transaction(async (tx) => {
-      // CEK OUTLET DAN PLAN ID DULU
+
       const outlet = await tx.outlet.findUnique({ where: { id: data.outlet_id } });
       if (!outlet) throw new NotFoundException('Outlet ID tidak ditemukan');
       
@@ -60,7 +60,7 @@ export class InvoiceService {
         });
       }
 
-      if (data.tipe_pembayaran === 'Kredit' || data.tipe_pembayaran === 'TOP') {
+      if (data.tipe_pembayaran === 'Kredit') {
         await tx.kartuPiutangOutlet.create({
           data: { invoice_outlet_id: invoice.id, sisa_piutang: total_tagihan },
         });

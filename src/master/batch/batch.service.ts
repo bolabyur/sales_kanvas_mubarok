@@ -24,7 +24,7 @@ export class BatchService {
     return this.prisma.batch.findMany({
       where: { is_deleted: false },
       include: { produk: true },
-      orderBy: { expired_date: 'asc' }, // Urutkan dari ED terdekat (FEFO)
+      orderBy: { expired_date: 'asc' }, 
     });
   }
 
@@ -40,7 +40,7 @@ export class BatchService {
   async update(id: number, data: UpdateBatchDto) {
     await this.findOne(id);
     
-    // Konversi string date ke Date object jika ada
+
     const updateData: any = { ...data };
     if (data.expired_date) {
       updateData.expired_date = new Date(data.expired_date);

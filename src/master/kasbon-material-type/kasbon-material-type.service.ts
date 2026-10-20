@@ -39,7 +39,6 @@ export class KasbonMaterialTypeService {
     });
   }
 
-  // Ditolak (400 Invalid reference) bila sudah dipakai plan.
   remove(id: number) {
     return this.prisma.kanvasKasbonMaterialType.delete({ where: { id } });
   }

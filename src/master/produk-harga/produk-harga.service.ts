@@ -36,7 +36,6 @@ export class ProdukHargaService {
 
   async remove(id: number) {
     await this.findOne(id);
-    // Soft Delete
     return this.prisma.produkHarga.update({
       where: { id },
       data: { is_deleted: true },

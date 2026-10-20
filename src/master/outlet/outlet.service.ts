@@ -7,19 +7,16 @@ export class OutletService {
   constructor(private prisma: PrismaService) {}
 
   async create(data: CreateOutletDto) {
-    // 1. Cek dulu apakah Tipe Harga ID tersebut benar-benar ada di database
     const tipeHarga = await this.prisma.tipeHarga.findUnique({
       where: { id: data.tipe_harga_id },
     });
 
-    // 2. Jika tidak ada, langsung tolak (400 Bad Request) tanpa menyentuh database Outlet
     if (!tipeHarga) {
       throw new BadRequestException(
         `Gagal membuat Outlet: Tipe Harga dengan ID ${data.tipe_harga_id} tidak ditemukan di database.`
       );
     }
 
-    // 3. Jika ada, baru simpan
     return this.prisma.outlet.create({ data });
   }
 
@@ -41,7 +38,6 @@ export class OutletService {
 
   async update(id: number, data: UpdateOutletDto) {
     await this.findOne(id);
-    // Cek tipe harga jika diubah
     if (data.tipe_harga_id) {
       const tipeHarga = await this.prisma.tipeHarga.findUnique({ where: { id: data.tipe_harga_id } });
       if (!tipeHarga) {

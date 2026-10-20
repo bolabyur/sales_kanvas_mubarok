@@ -8,7 +8,7 @@ process.on('warning', (warning) => {
     return;
   }
   console.warn(warning);
-}); // <-- Tanda kurung tutup ini yang sebelumnya kurang
+});
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);

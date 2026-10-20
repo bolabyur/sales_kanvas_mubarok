@@ -8,8 +8,6 @@ import { read, write } from "fs";
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
 
-// "Super Admin" dibuat lebih dulu supaya konsisten dapat id=1 di DB baru —
-// PermissionsGuard pakai role.id === 1 sebagai salah satu fallback bypass.
 const ROLES = ["Super Admin", "Sales"];
 
 async function main() {
@@ -17,7 +15,6 @@ async function main() {
     await prisma.role.upsert({ where: { name }, update: {}, create: { name } });
   }
 
-  // Role Sales boleh baca & tulis plan (Super Admin bypass di PermissionsGuard).
   const sales = await prisma.role.findUniqueOrThrow({
     where: { name: "Sales" },
   });

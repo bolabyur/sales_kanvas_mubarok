@@ -8,7 +8,6 @@ export class KasbonOperasionalService {
 
   async create(data: CreateKasbonOperasionalDto) {
     return this.prisma.$transaction(async (tx) => {
-      // Validasi apakah Plan ID ada
       const plan = await tx.salesKanvasPlan.findUnique({ where: { id: data.sales_kanvas_plan_id } });
       if (!plan) throw new NotFoundException('Rencana Kanvas (Plan ID) tidak ditemukan');
 
