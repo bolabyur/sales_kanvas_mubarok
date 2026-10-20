@@ -1,5 +1,4 @@
 import type { Employee } from "@/master/employee/types/employee.types";
-import type { KasbonMaterialType } from "@/master/kasbon-material-type/types/kasbonMaterialType.types";
 import type { MarketArea } from "@/master/market-area/types/marketArea.types";
 import type { Product } from "@/master/product/types/product.types";
 import type { Vehicle } from "@/master/vehicle/types/vehicle.types";
@@ -28,14 +27,6 @@ export type PlanDetail = {
   product: Product;
 };
 
-export type PlanKasbon = {
-  id: number;
-  kasbon_material_type_id: number;
-  price: string;
-  qty: number;
-  kasbonMaterialType: KasbonMaterialType;
-};
-
 export type Plan = {
   id: number;
   invoice: string;
@@ -55,7 +46,6 @@ export type Plan = {
   marketArea: MarketArea;
   salesKanvasPersonil: PlanPersonil[];
   salesKanvasPlanDetail: PlanDetail[];
-  salesKanvasKasbonMaterial: PlanKasbon[];
 };
 
 export type PlanPayload = {
@@ -65,13 +55,8 @@ export type PlanPayload = {
   market_area_id: number;
   vehicle_id: number;
   note: string | null;
-  salesKanvasPlanPersonil: { employee_id: number; position: string }[];
+  salesKanvasPersonil: { employee_id: number; position: string }[]; 
   salesKanvasPlanDetail: { product_id: number; qty: number }[];
-  salesKanvasKasbonMaterial: {
-    kasbon_material_type_id: number;
-    price: number;
-    qty: number;
-  }[];
 };
 
 export type PlanListQuery = {

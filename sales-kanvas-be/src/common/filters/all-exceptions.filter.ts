@@ -7,10 +7,7 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 
-/** Fallback global — menyamakan bentuk response untuk semua HttpException,
- * termasuk ZodValidationException (nestjs-zod, sudah bawa {message, errors}
- * sendiri lewat getResponse()) dan error yang tidak ditangkap
- * PrismaExceptionFilter. */
+
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger(AllExceptionsFilter.name);

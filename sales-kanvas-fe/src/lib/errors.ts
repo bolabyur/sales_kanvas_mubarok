@@ -12,7 +12,6 @@ const MESSAGES: Record<string, string> = {
   "Invalid data provided": "Data yang dikirim tidak valid",
 };
 
-/** Untuk mengubah error (API / jaringan) jadi pesan untuk user. */
 export function errorMessage(e: unknown): string {
   if (!(e instanceof ApiError)) return "Tidak dapat terhubung ke server";
   if (MESSAGES[e.message]) return MESSAGES[e.message];

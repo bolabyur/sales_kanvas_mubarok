@@ -12,11 +12,9 @@ export type SelectOption = { value: string; label: string };
 type Props = {
   options: SelectOption[];
   placeholder?: string;
-  /** Controlled; "" = belum dipilih. */
   value?: string;
   defaultValue?: string;
   onValueChange?: (value: string) => void;
-  /** Ikut terkirim di FormData lewat hidden input base-ui. */
   name?: string;
   id?: string;
   required?: boolean;

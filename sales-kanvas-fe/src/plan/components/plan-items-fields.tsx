@@ -4,17 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SelectInput } from "@/components/shared/select-input";
 import type { Employee } from "@/master/employee/types/employee.types";
-import type { KasbonMaterialType } from "@/master/kasbon-material-type/types/kasbonMaterialType.types";
 import type { Product } from "@/master/product/types/product.types";
-import { formatRupiah } from "@/lib/format";
 
 export type PersonilRow = { employee_id: string; position: string };
 export type DetailRow = { product_id: string; qty: string };
-export type KasbonRow = {
-  kasbon_material_type_id: string;
-  price: string;
-  qty: string;
-};
 
 type RowsProps<R, O> = {
   rows: R[];
@@ -174,82 +167,6 @@ export function DetailFields({
           />
         </div>
       ))}
-    </Section>
-  );
-}
-
-export function KasbonFields({
-  rows,
-  onChange,
-  options,
-}: RowsProps<KasbonRow, KasbonMaterialType>) {
-  const items = options.map((o) => ({ value: String(o.id), label: o.name }));
-  const total = rows.reduce(
-    (sum, r) => sum + Number(r.price || 0) * Number(r.qty || 0),
-    0,
-  );
-  return (
-    <Section
-      title="Kasbon Material"
-      empty={!rows.length}
-      onAdd={() =>
-        onChange([
-          ...rows,
-          { kasbon_material_type_id: "", price: "", qty: "1" },
-        ])
-      }
-    >
-      {rows.map((r, i) => (
-        <div
-          key={i}
-          className="grid grid-cols-[1fr_1fr_auto] items-center gap-2 sm:grid-cols-[2fr_1fr_5rem_auto]"
-        >
-          <SelectInput
-            aria-label="Jenis kasbon"
-            placeholder="Pilih jenis…"
-            className="col-span-2 sm:col-span-1"
-            required
-            options={items}
-            value={r.kasbon_material_type_id}
-            onValueChange={(v) =>
-              onChange(patchRow(rows, i, { kasbon_material_type_id: v }))
-            }
-          />
-          <Input
-            aria-label="Harga"
-            placeholder="Harga (Rp)"
-            type="number"
-            min={1}
-            step="0.01"
-            required
-            value={r.price}
-            onChange={(e) =>
-              onChange(patchRow(rows, i, { price: e.target.value }))
-            }
-          />
-          <Input
-            aria-label="Qty"
-            placeholder="Qty"
-            type="number"
-            min={1}
-            step={1}
-            required
-            value={r.qty}
-            onChange={(e) =>
-              onChange(patchRow(rows, i, { qty: e.target.value }))
-            }
-          />
-          <div className="col-start-3 row-start-1 sm:col-start-auto sm:row-start-auto">
-            <RemoveButton
-              onClick={() => onChange(rows.filter((_, idx) => idx !== i))}
-            />
-          </div>
-        </div>
-      ))}
-      <p className="text-right text-sm">
-        Total:{" "}
-        <span className="font-medium tabular-nums">{formatRupiah(total)}</span>
-      </p>
     </Section>
   );
 }

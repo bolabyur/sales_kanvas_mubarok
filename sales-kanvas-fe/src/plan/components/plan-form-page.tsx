@@ -1,5 +1,5 @@
 import { useState, type SubmitEvent } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link,useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,21 +7,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { FormField } from "@/components/shared/form-field";
 import { SelectInput } from "@/components/shared/select-input";
 import { useEmployees } from "@/master/employee/hooks/useEmployee";
-import { useKasbonMaterialTypes } from "@/master/kasbon-material-type/hooks/useKasbonMaterialType";
 import { useMarketAreas } from "@/master/market-area/hooks/useMarketArea";
 import { useProducts } from "@/master/product/hooks/useProduct";
 import { useVehicles } from "@/master/vehicle/hooks/useVehicle";
 import { toDateInput } from "@/lib/format";
-import { errorMessage } from "@/lib/errors";
-import { fieldErrors, num, text, textOrNull, type FieldErrors } from "@/lib/form";
+import {  text, textOrNull, type FieldErrors } from "@/lib/form";
 import { useCreatePlan, usePlan, useRevisePlan } from "../hooks/usePlan";
-import type { Plan, PlanPayload } from "../types/plan.types";
+import type { Plan } from "../types/plan.types";
 import {
   DetailFields,
-  KasbonFields,
   PersonilFields,
   type DetailRow,
-  type KasbonRow,
   type PersonilRow,
 } from "./plan-items-fields";
 
@@ -39,7 +35,6 @@ export function PlanFormPage() {
   return <PlanForm key={planId} plan={plan ?? null} />;
 }
 
-/** Master list BE hanya berisi data aktif; sertakan data lama plan agar pilihannya tidak hilang. */
 function withCurrent<T extends { id: number }>(list: T[], current: T[] = []) {
   const ids = new Set(list.map((x) => x.id));
   return [...list, ...current.filter((x) => !ids.has(x.id))];
@@ -48,7 +43,6 @@ function withCurrent<T extends { id: number }>(list: T[], current: T[] = []) {
 const today = () => new Date().toLocaleDateString("en-CA");
 
 function PlanForm({ plan }: { plan: Plan | null }) {
-  const navigate = useNavigate();
   const create = useCreatePlan();
   const revise = useRevisePlan();
   const save = plan ? revise : create;
@@ -57,7 +51,6 @@ function PlanForm({ plan }: { plan: Plan | null }) {
   const { data: vehicles = [] } = useVehicles();
   const { data: employees = [] } = useEmployees();
   const { data: products = [] } = useProducts();
-  const { data: kasbonTypes = [] } = useKasbonMaterialTypes();
 
   const [errors, setErrors] = useState<FieldErrors>({});
   const [personils, setPersonils] = useState<PersonilRow[]>(
@@ -70,55 +63,33 @@ function PlanForm({ plan }: { plan: Plan | null }) {
       { product_id: "", qty: "" },
     ],
   );
-  const [kasbon, setKasbon] = useState<KasbonRow[]>(
-    plan?.salesKanvasKasbonMaterial.map((k) => ({
-      kasbon_material_type_id: String(k.kasbon_material_type_id),
-      price: String(Number(k.price)),
-      qty: String(k.qty),
-    })) ?? [],
-  );
 
   function onSubmit(e: SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     const pergi = text(fd, "tgl_pergi_kanvas");
     const kembali = textOrNull(fd, "tgl_kembali_kanvas");
+    
     if (kembali && kembali < pergi) {
       setErrors({ tgl_kembali_kanvas: "Tanggal kembali tidak boleh sebelum tanggal pergi" });
       return;
     }
     setErrors({});
 
-    const payload: PlanPayload = {
-      tgl_invoice: text(fd, "tgl_invoice"),
-      tgl_pergi_kanvas: pergi,
-      tgl_kembali_kanvas: kembali,
-      market_area_id: num(fd, "market_area_id"),
-      vehicle_id: num(fd, "vehicle_id"),
-      note: textOrNull(fd, "note"),
-      salesKanvasPlanPersonil: personils.map((p) => ({
-        employee_id: Number(p.employee_id),
-        position: p.position.trim(),
-      })),
-      salesKanvasPlanDetail: details.map((d) => ({ product_id: Number(d.product_id), qty: Number(d.qty) })),
-      salesKanvasKasbonMaterial: kasbon.map((k) => ({
-        kasbon_material_type_id: Number(k.kasbon_material_type_id),
-        price: Number(k.price),
-        qty: Number(k.qty),
-      })),
-    };
+    if (personils.some(p => !p.employee_id)) {
+      toast.error("Pilih karyawan untuk semua baris personil.");
+      return;
+    }
+    if (details.some(d => !d.product_id)) {
+      toast.error("Pilih produk untuk semua baris detail.");
+      return;
+    }
 
-    const onSuccess = (saved: Plan) => {
-      toast.success(plan ? `Revisi tersimpan: ${saved.invoice}` : `Plan dibuat: ${saved.invoice}`);
-      navigate(`/plan/${saved.id}`, { replace: true });
-    };
-    const onError = (err: Error) => {
-      setErrors(fieldErrors(err));
-      toast.error(errorMessage(err));
-    };
+    
 
-    if (plan) revise.mutate({ id: plan.id, ...payload }, { onSuccess, onError });
-    else create.mutate(payload, { onSuccess, onError });
+
+
+
   }
 
   return (
@@ -191,11 +162,6 @@ function PlanForm({ plan }: { plan: Plan | null }) {
         rows={details}
         onChange={setDetails}
         options={withCurrent(products, plan?.salesKanvasPlanDetail.map((d) => d.product))}
-      />
-      <KasbonFields
-        rows={kasbon}
-        onChange={setKasbon}
-        options={withCurrent(kasbonTypes, plan?.salesKanvasKasbonMaterial.map((k) => k.kasbonMaterialType))}
       />
 
       <div className="flex justify-end gap-2">

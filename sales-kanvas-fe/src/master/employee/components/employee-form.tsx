@@ -24,7 +24,6 @@ import type { Employee, Gender } from "../types/employee.types";
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** null = tambah baru */
   employee: Employee | null;
 };
 

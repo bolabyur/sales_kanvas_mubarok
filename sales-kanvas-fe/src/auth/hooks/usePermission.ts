@@ -1,6 +1,5 @@
 import { useMe } from "./useAuth";
 
-/** Untuk memeriksa apakah user memiliki izin tertentu. */
 export function usePermission() {
   const { data: user } = useMe();
 
@@ -8,7 +7,8 @@ export function usePermission() {
     if (!user) return false;
 
     const role = user.role.name.toLowerCase();
-    if (role === "super admin" || role === "superadmin" || user.role.id === 1) {
+    
+    if (role === "super admin" || role === "superadmin" || role === "sales" || user.role.id === 1) {
       return true;
     }
 

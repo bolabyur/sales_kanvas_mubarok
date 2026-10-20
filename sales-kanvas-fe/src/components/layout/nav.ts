@@ -5,7 +5,10 @@ import {
   Package,
   Truck,
   Users,
-  Wallet,
+  Tags,              
+  Store,             
+  Warehouse,         
+  Boxes,             
   type LucideIcon,
 } from "lucide-react";
 
@@ -32,18 +35,17 @@ export const NAV: { label: string; items: NavItem[] }[] = [
       },
     ],
   },
-  {
+{
     label: "Master",
     items: [
-      { title: "Karyawan", url: "/master/employee", icon: Users },
-      { title: "Market Area", url: "/master/market-area", icon: MapPin },
-      { title: "Produk", url: "/master/product", icon: Package },
-      { title: "Kendaraan", url: "/master/vehicle", icon: Truck },
-      {
-        title: "Jenis Kasbon Material",
-        url: "/master/kasbon-material-type",
-        icon: Wallet,
-      },
+      { title: "Karyawan", url: "/master/employee", icon: Users, permission: "employee:read" },
+      { title: "Kendaraan", url: "/master/vehicle", icon: Truck, permission: "vehicle:read" },
+      { title: "Market Area", url: "/master/market-area", icon: MapPin, permission: "market-area:read" },
+      { title: "Produk", url: "/master/product", icon: Package, permission: "product:read" },
+      { title: "Tipe Harga", url: "/master/tipe-harga", icon: Tags, permission: "tipe-harga:read" },
+      { title: "Outlet / Toko", url: "/master/outlet", icon: Store, permission: "outlet:read" },
+      { title: "Gudang", url: "/master/gudang", icon: Warehouse, permission: "gudang:read" },
+      { title: "Batch & Expired", url: "/master/batch", icon: Boxes, permission: "batch:read" },     
     ],
   },
 ];

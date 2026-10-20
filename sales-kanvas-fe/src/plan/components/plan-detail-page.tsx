@@ -15,7 +15,7 @@ import {
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { SelectInput } from "@/components/shared/select-input";
 import { usePermission } from "@/auth/hooks/usePermission";
-import { formatDate, formatRupiah } from "@/lib/format";
+import { formatDate} from "@/lib/format";
 import { errorMessage } from "@/lib/errors";
 import { usePlan, useUpdatePlanStatus } from "../hooks/usePlan";
 import { PLAN_STATUSES, type Plan, type PlanStatus } from "../types/plan.types";
@@ -34,10 +34,6 @@ export function PlanDetailPage() {
     );
 
   const editable = canWrite && plan.status !== "BATAL";
-  const kasbonTotal = plan.salesKanvasKasbonMaterial.reduce(
-    (sum, k) => sum + Number(k.price) * k.qty,
-    0,
-  );
 
   return (
     <div className="mx-auto grid max-w-4xl gap-6">
@@ -118,33 +114,6 @@ export function PlanDetailPage() {
         ))}
       </ItemsTable>
 
-      <ItemsTable
-        title="Kasbon Material"
-        head={["Jenis", "Harga", "Qty", "Subtotal"]}
-        footer={
-          <TableRow>
-            <TableCell colSpan={3}>Total</TableCell>
-            <TableCell className="tabular-nums">
-              {formatRupiah(kasbonTotal)}
-            </TableCell>
-          </TableRow>
-        }
-      >
-        {plan.salesKanvasKasbonMaterial.map((k) => (
-          <TableRow key={k.id}>
-            <TableCell className="font-medium">
-              {k.kasbonMaterialType.name}
-            </TableCell>
-            <TableCell className="tabular-nums">
-              {formatRupiah(k.price)}
-            </TableCell>
-            <TableCell className="tabular-nums">{k.qty}</TableCell>
-            <TableCell className="tabular-nums">
-              {formatRupiah(Number(k.price) * k.qty)}
-            </TableCell>
-          </TableRow>
-        ))}
-      </ItemsTable>
     </div>
   );
 }

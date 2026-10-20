@@ -65,7 +65,6 @@ export class AuthController {
   }
 }
 
-/** Map objek user exclude sensitive data */
 function toSafeUser(user: AuthenticatedUser) {
   const { password, refresh_token, role, ...safe } = user;
   return {

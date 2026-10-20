@@ -1,0 +1,2 @@
+export type Outlet = { id: number; nama_toko: string; alamat: string | null; tipe_harga_id: number; tipeHarga?: { nama_tipe: string } };
+export type OutletPayload = { nama_toko: string; alamat?: string | null; tipe_harga_id: number; };

@@ -9,12 +9,7 @@ import { AUTH_ONLY_KEY } from '../decorators/authenticated.decorator';
 import { PERMISSIONS_KEY } from '../decorators/require-permission.decorator';
 import { AuthenticatedUser } from '../interfaces/authenticated-user.interface';
 
-/**
- * Fail-closed: handler TANPA @RequirePermission DAN TANPA @Authenticated
- * ditolak — pasang salah satunya di setiap endpoint yang berada di belakang
- * JwtAuthGuard. Super Admin (role bernama "Super Admin"/"superadmin", atau
- * role_id 1) bypass semua pengecekan permission.
- */
+
 @Injectable()
 export class PermissionsGuard implements CanActivate {
   constructor(private reflector: Reflector) {}

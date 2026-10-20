@@ -2,11 +2,7 @@ import { ArgumentsHost, Catch, ExceptionFilter, Logger } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { Prisma } from '@prisma/client';
 
-/**
- * Memetakan error Prisma ke HTTP response yang sesuai untuk SEMUA handler,
- * tanpa perlu try/catch berulang di tiap service — lihat prisma-exception
- * filter di be-my-mubarok, dipakai pola sama di sini.
- */
+
 @Catch(Prisma.PrismaClientKnownRequestError, Prisma.PrismaClientValidationError)
 export class PrismaExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(PrismaExceptionFilter.name);

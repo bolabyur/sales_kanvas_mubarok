@@ -59,7 +59,6 @@ export class AuthService {
     return { user, accessToken, refreshToken };
   }
 
-  /** Verifikasi refresh token lalu rotate: token baru diterbitkan, yang lama tak bisa dipakai lagi. */
   async refreshToken(token: string) {
     let payload: { sub: number };
     try {
@@ -101,7 +100,6 @@ export class AuthService {
     await this.revokeRefreshToken(userId);
   }
 
-  /** Dipakai JwtStrategy untuk memvalidasi user dari access token. */
   async validateUser(userId: number): Promise<AuthenticatedUser> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },

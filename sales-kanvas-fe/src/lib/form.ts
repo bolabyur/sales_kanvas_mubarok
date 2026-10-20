@@ -2,7 +2,6 @@ import { ApiError } from "./api";
 
 export type FieldErrors = Record<string, string>;
 
-/** Error validasi Zod dari BE → { "field": "pesan" } untuk ditampilkan per input. */
 export function fieldErrors(e: unknown): FieldErrors {
   if (!(e instanceof ApiError) || !Array.isArray(e.errors)) return {};
   const issues = e.errors as { path: (string | number)[]; message: string }[];

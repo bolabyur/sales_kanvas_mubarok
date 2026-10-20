@@ -1,7 +1,6 @@
 import { Outlet } from "react-router-dom";
 import { usePermission } from "../hooks/usePermission";
 
-/** page require permission. */
 export function RequirePermission({ permission }: { permission: string }) {
   const can = usePermission();
   if (!can(permission)) {

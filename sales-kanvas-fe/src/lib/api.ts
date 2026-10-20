@@ -6,10 +6,8 @@ const REFRESH_KEY =
 const REFRESH_PATH = "/auth/refresh";
 const REFRESH_LOCK = "sk-auth-refresh";
 
-/** url yang tidak boleh di-refresh */
 const NO_REFRESH = new Set(["/auth/login", REFRESH_PATH]);
 
-/** Interceptor response dari BE. */
 export type ApiResponse<T> = {
   success: true;
   message: string;
@@ -19,7 +17,6 @@ export type ApiResponse<T> = {
 
 type TokenPair = { access_token: string; refresh_token: string };
 
-/** Error BE `errors` berisi detail validasi Zod. */
 export class ApiError extends Error {
   readonly status: number;
   readonly errors?: unknown;
@@ -52,11 +49,6 @@ function send(path: string, init: RequestInit, access: string | null) {
   return fetch(`${BASE_URL}${path}`, { ...init, headers });
 }
 
-/**
- * Panggil API BE dan kembalikan `data`.
- * Access token kedaluwarsa (401) di-refresh otomatis lalu request diulang sekali.
- * @throws {ApiError} bila BE error.
- */
 export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   const access = tokens.access();
   let res = await send(path, init, access);

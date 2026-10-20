@@ -13,9 +13,7 @@ const rupiahFmt = new Intl.NumberFormat("id-ID", {
 export const formatDate = (v?: string | null) =>
   v ? dateFmt.format(new Date(v)) : "-";
 
-/** Decimal Prisma datang sebagai string ("12500.00"). */
 export const formatRupiah = (v?: number | string | null) =>
   v == null ? "-" : rupiahFmt.format(Number(v));
 
-/** Konversi tanggal ke format input date. */
 export const toDateInput = (v?: string | null) => (v ? v.slice(0, 10) : "");

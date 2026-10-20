@@ -10,8 +10,7 @@ import { map } from 'rxjs/operators';
 import { RESPONSE_MESSAGE } from '../decorators/response-message.decorator';
 import { ApiResponse } from '../interfaces/api-response.interface';
 
-/** Membungkus semua response sukses jadi envelope standar {success, message,
- * data, statusCode}. Pesan diambil dari @ResponseMessage() di handler. */
+
 @Injectable()
 export class ResponseInterceptor implements NestInterceptor {
   constructor(private reflector: Reflector) {}

@@ -1,0 +1,2 @@
+export type Batch = { id: number; produk_id: number; no_batch: string; expired_date: string; stok_gudang: number; produk?: { name: string } };
+export type BatchPayload = { produk_id: number; no_batch: string; expired_date: string; stok_gudang: number; };

@@ -40,3 +40,8 @@ export type ProductPayload = {
   hpp: number | null;
   expired_count: number | null;
 };
+
+export type ProductWithPrices = ProductPayload & {
+  id?: number;
+  prices: { tipe_harga_id: number; harga: number }[];
+};

@@ -8,36 +8,31 @@ import { DataTable } from "@/components/shared/data-table";
 import { RowActions } from "@/components/shared/row-actions";
 import { SearchInput } from "@/components/shared/search-input";
 import { usePermission } from "@/auth/hooks/usePermission";
-import { formatDate } from "@/lib/format";
 import { errorMessage } from "@/lib/errors";
-import {
-  useDeleteKasbonMaterialType,
-  useKasbonMaterialTypes,
-} from "../hooks/useKasbonMaterialType";
-import type { KasbonMaterialType } from "../types/kasbonMaterialType.types";
-import { KasbonMaterialTypeForm } from "./kasbon-material-type-form";
+import { useDeleteTipeHarga, useTipeHarga } from "../hooks/useTipeHarga";
+import type { TipeHarga } from "../types/tipe-harga.types";
+import { TipeHargaForm } from "./tipe-harga-form";
 
-export function KasbonMaterialTypePage() {
-  const { data = [], isLoading, isError } = useKasbonMaterialTypes();
-  const remove = useDeleteKasbonMaterialType();
-  const canWrite = usePermission()("kasbon-material-type:write");
+export function TipeHargaPage() {
+  const { data = [], isLoading, isError } = useTipeHarga();
+  const remove = useDeleteTipeHarga();
+  const canWrite = usePermission()("tipe-harga:write");
 
   const [search, setSearch] = useState("");
   const [formOpen, setFormOpen] = useState(false);
-  const [editing, setEditing] = useState<KasbonMaterialType | null>(null);
-  const [deleting, setDeleting] = useState<KasbonMaterialType | null>(null);
+  const [editing, setEditing] = useState<TipeHarga | null>(null);
+  const [deleting, setDeleting] = useState<TipeHarga | null>(null);
 
-  const openForm = (row: KasbonMaterialType | null) => {
+  const openForm = (row: TipeHarga | null) => {
     setEditing(row);
     setFormOpen(true);
   };
 
-  const columns: ColumnDef<KasbonMaterialType>[] = [
-    { accessorKey: "name", header: "Nama" },
+  const columns: ColumnDef<TipeHarga>[] = [
     {
-      accessorKey: "created_at",
-      header: "Dibuat",
-      cell: ({ row }) => formatDate(row.original.created_at),
+      accessorKey: "nama_tipe",
+      header: "Nama Tipe Harga",
+      cell: ({ row }) => <span className="font-medium">{row.original.nama_tipe}</span>,
     },
     ...(canWrite
       ? [
@@ -49,7 +44,7 @@ export function KasbonMaterialTypePage() {
                 onDelete={() => setDeleting(row.original)}
               />
             ),
-          } satisfies ColumnDef<KasbonMaterialType>,
+          } satisfies ColumnDef<TipeHarga>,
         ]
       : []),
   ];
@@ -64,7 +59,11 @@ export function KasbonMaterialTypePage() {
         globalFilter={search}
         toolbar={
           <>
-            <SearchInput value={search} onChange={(e) => setSearch(e.target.value)} />
+            <SearchInput
+              placeholder="Cari tipe harga…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
             {canWrite && (
               <Button className="ml-auto" onClick={() => openForm(null)}>
                 <Plus /> Tambah
@@ -74,25 +73,17 @@ export function KasbonMaterialTypePage() {
         }
       />
 
-      <KasbonMaterialTypeForm
-        open={formOpen}
-        onOpenChange={setFormOpen}
-        kasbonMaterialType={editing}
-      />
+      <TipeHargaForm open={formOpen} onOpenChange={setFormOpen} tipeHarga={editing} />
 
       <ConfirmDialog
         open={!!deleting}
         onOpenChange={(o) => !o && setDeleting(null)}
-        title="Hapus jenis kasbon material?"
-        description={`"${deleting?.name}" akan dihapus. Jenis yang sudah dipakai plan tidak bisa dihapus.`}
+        title="Hapus Tipe Harga?"
+        description={`"${deleting?.nama_tipe}" akan dihapus.`}
         isPending={remove.isPending}
         onConfirm={() =>
-          deleting &&
-          remove.mutate(deleting.id, {
-            onSuccess: () => {
-              toast.success("Jenis kasbon dihapus");
-              setDeleting(null);
-            },
+          deleting && remove.mutate(deleting.id, {
+            onSuccess: () => { toast.success("Tipe Harga dihapus"); setDeleting(null); },
             onError: (err) => toast.error(errorMessage(err)),
           })
         }
