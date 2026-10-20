@@ -1,6 +1,4 @@
-node_modules
-dist
+node_modules/
 .env
-*.log
-docker-compose.production.yml
-.env.production
+dist/
+build/
