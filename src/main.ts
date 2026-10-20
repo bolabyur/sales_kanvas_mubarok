@@ -13,13 +13,10 @@ process.on('warning', (warning) => {
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   
-  // ==========================================
-  // TAMBAHKAN KONFIGURASI CORS DI SINI
-  // ==========================================
   app.enableCors({
-    origin: 'http://localhost:3001', // Mengizinkan Frontend Vite Anda
+    origin: 'http://localhost:3001',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    credentials: true, // Mengizinkan pengiriman cookies/authorization header
+    credentials: true, 
   });
 
   app.setGlobalPrefix('api');
