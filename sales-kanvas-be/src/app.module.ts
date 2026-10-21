@@ -8,7 +8,6 @@ import { VehicleModule } from './master/vehicle/vehicle.module';
 import { MarketAreaModule } from './master/market-area/market-area.module';
 import { ProductModule } from './master/product/product.module';
 import { EmployeeModule } from './master/employee/employee.module';
-import { KasbonMaterialTypeModule } from './master/kasbon-material-type/kasbon-material-type.module';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { OutletModule } from './master/outlet/outlet.module';
 import { BatchModule } from './master/batch/batch.module';
@@ -22,7 +21,6 @@ import { SettlementModule } from './transaksi/settlement/settlement.module';
 import { GudangModule } from './master/gudang/gudang.module';
 import { PlanOutletModule } from './transaksi/plan-outlet/plan-outlet.module';
 import { ReturModule } from './transaksi/retur/retur.module';
-import { ProdukHargaModule } from './master/produk-harga/produk-harga.module';
 import { PembayaranModule } from './transaksi/pembayaran/pembayaran.module';
 
 
@@ -39,7 +37,6 @@ import { PembayaranModule } from './transaksi/pembayaran/pembayaran.module';
     MarketAreaModule,
     ProductModule,
     EmployeeModule,
-    KasbonMaterialTypeModule,
     InvoiceModule,
     KasbonProdukModule,
     ProdukOutModule,
@@ -49,7 +46,6 @@ import { PembayaranModule } from './transaksi/pembayaran/pembayaran.module';
     GudangModule,
     PlanOutletModule,
     ReturModule,
-    ProdukHargaModule,
     PembayaranModule,
   ],
   providers: [{ provide: APP_INTERCEPTOR, useClass: ResponseInterceptor }],
