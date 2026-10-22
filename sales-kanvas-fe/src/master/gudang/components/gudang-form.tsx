@@ -1,12 +1,10 @@
 import { useState, type SubmitEvent } from "react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/shared/form-field";
 import { Modal } from "@/components/shared/modal";
 import { SelectInput } from "@/components/shared/select-input";
-import { errorMessage } from "@/lib/errors";
 import { fieldErrors, text, type FieldErrors } from "@/lib/form";
 import { useSaveGudang } from "../hooks/useGudang";
 import type { Gudang } from "../types/gudang.types";
@@ -24,7 +22,7 @@ export function GudangForm({ open, onOpenChange, gudang }: Props) {
     setErrors({});
     save.mutate(
       { id: gudang?.id, nama_gudang: text(fd, "nama_gudang"), tipe_gudang: text(fd, "tipe_gudang") },
-      { onSuccess: () => { toast.success(gudang ? "Gudang diperbarui" : "Gudang ditambahkan"); handleOpenChange(false); }, onError: (err) => { setErrors(fieldErrors(err)); toast.error(errorMessage(err)); } }
+      { onSuccess: () => { ; handleOpenChange(false); }, onError: (err) => { setErrors(fieldErrors(err)); } }
     );
   }
 

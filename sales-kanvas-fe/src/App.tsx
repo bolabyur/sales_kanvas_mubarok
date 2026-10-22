@@ -18,22 +18,26 @@ import { PlanDetailPage } from "@/plan/components/plan-detail-page";
 import { PlanFormPage } from "@/plan/components/plan-form-page";
 import { PlanListPage } from "@/plan/components/plan-list-page";
 
+import { UserPage } from "@/master/user/components/user-page";
+import { RolePage } from "@/master/role/components/role-page";
+import { PermissionPage } from "@/master/permission/components/permission-page";
+
 export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
-      
+
       <Route element={<RequireAuth />}>
         <Route element={<AdminLayout />}>
           <Route index element={<DashboardPage />} />
 
           <Route path="/master/product" element={<ProductPage />} />
           <Route path="/master/tipe-harga" element={<TipeHargaPage />} />
-          
+
           <Route path="/master/outlet" element={<OutletPage />} />
           <Route path="/master/gudang" element={<GudangPage />} />
           <Route path="/master/batch" element={<BatchPage />} />
-          
+
           <Route path="/master/employee" element={<EmployeePage />} />
           <Route path="/master/vehicle" element={<VehiclePage />} />
           <Route path="/master/market-area" element={<MarketAreaPage />} />
@@ -45,15 +49,48 @@ export default function App() {
               <Route path="/plan/new" element={<PlanFormPage />} />
               <Route path="/plan/:id/edit" element={<PlanFormPage />} />
             </Route>
+
+            <Route path="/master/user" element={<UserPage />} />
+            <Route path="/master/role" element={<RolePage />} />
+            <Route path="/master/permission" element={<PermissionPage />} />
           </Route>
 
-          <Route path="/transaksi/kasbon-produk" element={<div className="p-6">Halaman BON Barang (Belum Dibuat)</div>} />
-          <Route path="/transaksi/produk-out" element={<div className="p-6">Halaman Loading (Belum Dibuat)</div>} />
-          <Route path="/transaksi/invoice" element={<div className="p-6">Halaman Invoice (Belum Dibuat)</div>} />
-          <Route path="/transaksi/pembayaran" element={<div className="p-6">Halaman Pembayaran (Belum Dibuat)</div>} />
-          <Route path="/transaksi/retur" element={<div className="p-6">Halaman Retur (Belum Dibuat)</div>} />
-          <Route path="/transaksi/produk-in" element={<div className="p-6">Halaman Unloading (Belum Dibuat)</div>} />
-          <Route path="/transaksi/settlement" element={<div className="p-6">Halaman Settlement (Belum Dibuat)</div>} />
+          <Route
+            path="/transaksi/kasbon-produk"
+            element={
+              <div className="p-6">Halaman BON Barang (Belum Dibuat)</div>
+            }
+          />
+          <Route
+            path="/transaksi/produk-out"
+            element={<div className="p-6">Halaman Loading (Belum Dibuat)</div>}
+          />
+          <Route
+            path="/transaksi/invoice"
+            element={<div className="p-6">Halaman Invoice (Belum Dibuat)</div>}
+          />
+          <Route
+            path="/transaksi/pembayaran"
+            element={
+              <div className="p-6">Halaman Pembayaran (Belum Dibuat)</div>
+            }
+          />
+          <Route
+            path="/transaksi/retur"
+            element={<div className="p-6">Halaman Retur (Belum Dibuat)</div>}
+          />
+          <Route
+            path="/transaksi/produk-in"
+            element={
+              <div className="p-6">Halaman Unloading (Belum Dibuat)</div>
+            }
+          />
+          <Route
+            path="/transaksi/settlement"
+            element={
+              <div className="p-6">Halaman Settlement (Belum Dibuat)</div>
+            }
+          />
 
           <Route
             path="*"

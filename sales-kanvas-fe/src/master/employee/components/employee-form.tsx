@@ -88,7 +88,6 @@ export function EmployeeForm({ open, onOpenChange, employee }: Props) {
       },
       {
         onSuccess: () => {
-          toast.success(employee ? "Karyawan diperbarui" : "Karyawan ditambahkan");
           handleOpenChange(false);
         },
         onError: (err) => {

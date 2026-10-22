@@ -33,8 +33,7 @@ export function TipeHargaForm({ open, onOpenChange, tipeHarga }: Props) {
     save.mutate(
       { id: tipeHarga?.id, nama_tipe: text(fd, "nama_tipe") },
       {
-        onSuccess: () => { 
-          toast.success(tipeHarga ? "Tipe Harga diperbarui" : "Tipe Harga ditambahkan"); 
+        onSuccess: () => {  
           handleOpenChange(false); 
         },
         onError: (err) => { 

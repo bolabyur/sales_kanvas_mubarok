@@ -9,7 +9,6 @@ import { AUTH_ONLY_KEY } from '../decorators/authenticated.decorator';
 import { PERMISSIONS_KEY } from '../decorators/require-permission.decorator';
 import { AuthenticatedUser } from '../interfaces/authenticated-user.interface';
 
-
 @Injectable()
 export class PermissionsGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
@@ -25,25 +24,14 @@ export class PermissionsGuard implements CanActivate {
     );
 
     if (!requiredPermissions?.length && !authOnly) {
-      throw new ForbiddenException(
-        'Endpoint ini belum diberi @RequirePermission atau @Authenticated',
-      );
+      throw new ForbiddenException('Endpoint ini belum diberi izin.');
     }
 
-    const user = context.switchToHttp().getRequest().user as
-      | AuthenticatedUser
-      | undefined;
-    if (!user) {
-      throw new ForbiddenException('User not authenticated');
-    }
+    const user = context.switchToHttp().getRequest().user as AuthenticatedUser | undefined;
+    if (!user) throw new ForbiddenException('User not authenticated');
 
-    if (!requiredPermissions?.length) {
-      return true;
-    }
-
-    if (this.isSuperAdmin(user)) {
-      return true;
-    }
+    if (!requiredPermissions?.length) return true;
+    if (this.isSuperAdmin(user)) return true;
 
     const userPermissions = this.extractUserPermissions(user);
     const hasPermission = requiredPermissions.some((required) =>
@@ -51,9 +39,7 @@ export class PermissionsGuard implements CanActivate {
     );
 
     if (!hasPermission) {
-      throw new ForbiddenException(
-        `Required permissions: ${requiredPermissions.join(', ')}`,
-      );
+      throw new ForbiddenException(`Required permissions: ${requiredPermissions.join(', ')}`);
     }
 
     return true;
@@ -61,11 +47,7 @@ export class PermissionsGuard implements CanActivate {
 
   private isSuperAdmin(user: AuthenticatedUser): boolean {
     const roleName = user.role?.name?.toLowerCase();
-    return (
-      roleName === 'super admin' ||
-      roleName === 'superadmin' ||
-      user.role?.id === 1
-    );
+    return roleName === 'super admin' || roleName === 'superadmin' || user.role?.id === 1;
   }
 
   private extractUserPermissions(user: AuthenticatedUser): string[] {
@@ -78,6 +60,12 @@ export class PermissionsGuard implements CanActivate {
     const [resource, action] = required.split(':');
     if (userPerms.includes(`${resource}:*`)) return true;
     if (action && userPerms.includes(`${resource}:${action}:*`)) return true;
+
+    if (action === 'write') {
+      return userPerms.includes(`${resource}:create`) || 
+             userPerms.includes(`${resource}:update`) || 
+             userPerms.includes(`${resource}:delete`);
+    }
 
     return false;
   }

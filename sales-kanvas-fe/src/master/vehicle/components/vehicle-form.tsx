@@ -42,9 +42,6 @@ export function VehicleForm({ open, onOpenChange, vehicle }: Props) {
       },
       {
         onSuccess: () => {
-          toast.success(
-            vehicle ? "Kendaraan diperbarui" : "Kendaraan ditambahkan",
-          );
           handleOpenChange(false);
         },
         onError: (err) => {

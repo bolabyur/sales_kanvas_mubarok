@@ -26,7 +26,7 @@ export function OutletForm({ open, onOpenChange, outlet }: Props) {
     setErrors({});
     save.mutate(
       { id: outlet?.id, nama_toko: text(fd, "nama_toko"), alamat: text(fd, "alamat"), tipe_harga_id: num(fd, "tipe_harga_id") },
-      { onSuccess: () => { toast.success(outlet ? "Outlet diperbarui" : "Outlet ditambahkan"); handleOpenChange(false); }, onError: (err) => { setErrors(fieldErrors(err)); toast.error(errorMessage(err)); } }
+      { onSuccess: () => {; handleOpenChange(false); }, onError: (err) => { setErrors(fieldErrors(err)); toast.error(errorMessage(err)); } }
     );
   }
 

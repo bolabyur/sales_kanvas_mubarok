@@ -22,6 +22,9 @@ import { GudangModule } from './master/gudang/gudang.module';
 import { PlanOutletModule } from './transaksi/plan-outlet/plan-outlet.module';
 import { ReturModule } from './transaksi/retur/retur.module';
 import { PembayaranModule } from './transaksi/pembayaran/pembayaran.module';
+import { UserModule } from './master/user/user.module';
+import { RoleModule } from './master/role/role.module';
+import { PermissionModule } from './master/permission/permission.module';
 
 
 @Module({
@@ -47,6 +50,9 @@ import { PembayaranModule } from './transaksi/pembayaran/pembayaran.module';
     PlanOutletModule,
     ReturModule,
     PembayaranModule,
+    UserModule,
+    RoleModule,
+    PermissionModule,
   ],
   providers: [{ provide: APP_INTERCEPTOR, useClass: ResponseInterceptor }],
 })

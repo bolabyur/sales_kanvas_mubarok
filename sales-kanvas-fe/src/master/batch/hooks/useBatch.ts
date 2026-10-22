@@ -19,7 +19,6 @@ export function useSaveBatch() {
         body: JSON.stringify(payload),
       }),
     onSuccess: () => {
-      toast.success("Data Batch berhasil disimpan!");
       qc.invalidateQueries({ queryKey: KEY });
     },
     onError: (error) => {
@@ -33,7 +32,6 @@ export function useDeleteBatch() {
   return useMutation({
     mutationFn: (id: number) => api(`${URL}/${id}`, { method: "DELETE" }),
     onSuccess: () => {
-      toast.success("Batch berhasil dihapus!");
       qc.invalidateQueries({ queryKey: KEY });
     },
   });

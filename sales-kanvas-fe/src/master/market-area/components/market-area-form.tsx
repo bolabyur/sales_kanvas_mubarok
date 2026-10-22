@@ -33,9 +33,7 @@ export function MarketAreaForm({ open, onOpenChange, marketArea }: Props) {
       { id: marketArea?.id, name: text(fd, "name") },
       {
         onSuccess: () => {
-          toast.success(
-            marketArea ? "Market area diperbarui" : "Market area ditambahkan",
-          );
+          ;
           handleOpenChange(false);
         },
         onError: (err) => {

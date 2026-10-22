@@ -78,7 +78,6 @@ export function ProductForm({ open, onOpenChange, product }: Props) {
       },
       {
         onSuccess: () => {
-          toast.success(product ? "Produk diperbarui" : "Produk ditambahkan");
           handleOpenChange(false);
         },
         onError: (err) => {

@@ -1,11 +1,9 @@
-const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:53110/api";
+const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:53103/api";
 const ACCESS_KEY = import.meta.env.VITE_ACCESS_TOKEN_KEY ?? "sk_access_token";
-const REFRESH_KEY =
-  import.meta.env.VITE_REFRESH_TOKEN_KEY ?? "sk_refresh_token";
+const REFRESH_KEY = import.meta.env.VITE_REFRESH_TOKEN_KEY ?? "sk_refresh_token";
 
 const REFRESH_PATH = "/auth/refresh";
 const REFRESH_LOCK = "sk-auth-refresh";
-
 const NO_REFRESH = new Set(["/auth/login", REFRESH_PATH]);
 
 export type ApiResponse<T> = {
@@ -20,12 +18,14 @@ type TokenPair = { access_token: string; refresh_token: string };
 export class ApiError extends Error {
   readonly status: number;
   readonly errors?: unknown;
+  readonly details?: string;
 
-  constructor(message: string, status: number, errors?: unknown) {
+  constructor(message: string, status: number, errors?: unknown, details?: string) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.errors = errors;
+    this.details = details;
   }
 }
 
@@ -44,7 +44,9 @@ export const tokens = {
 
 function send(path: string, init: RequestInit, access: string | null) {
   const headers = new Headers(init.headers);
-  if (init.body) headers.set("Content-Type", "application/json");
+  if (init.body && !(init.body instanceof FormData)) {
+    headers.set("Content-Type", "application/json");
+  }
   if (access) headers.set("Authorization", `Bearer ${access}`);
   return fetch(`${BASE_URL}${path}`, { ...init, headers });
 }
@@ -59,7 +61,7 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
     }
   }
 
-  const body: { message?: string; errors?: unknown } | null = await res
+  const body: { message?: string; errors?: unknown; details?: string } | null = await res
     .json()
     .catch(() => null);
 
@@ -68,6 +70,7 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
       body?.message ?? res.statusText,
       res.status,
       body?.errors,
+      body?.details
     );
   }
   return (body as ApiResponse<T>).data;
@@ -88,15 +91,10 @@ function withLock<T>(fn: () => Promise<T>): Promise<T> {
 
 async function doRefresh(staleAccess: string): Promise<boolean> {
   if (tokens.access() !== staleAccess) return tokens.access() !== null;
-
   const refresh = tokens.refresh();
   if (!refresh) return false;
 
-  const res = await send(
-    REFRESH_PATH,
-    { method: "POST", body: JSON.stringify({ refresh_token: refresh }) },
-    null,
-  );
+  const res = await send(REFRESH_PATH, { method: "POST", body: JSON.stringify({ refresh_token: refresh }) }, null);
 
   if (!res.ok) {
     if (res.status === 401) tokens.clear();

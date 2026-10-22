@@ -16,26 +16,33 @@ import App from "./App.tsx";
 
 const queryClient = new QueryClient({
   queryCache: new QueryCache({
-    onError: (error) => {
+    onError: (error: unknown) => { 
       if (error instanceof ApiError && error.status !== 401) {
-        toast.error(error.message || "Terjadi kesalahan pada server");
+        toast.error(error.message || "Terjadi kesalahan saat mengambil data");
       }
     }
   }),
   mutationCache: new MutationCache({
-    onError: (error) => {
+    onError: (error: unknown) => {
       if (error instanceof ApiError) {
         if (error.status === 401) {
           queryClient.setQueryData(ME_KEY, null);
         } else {
-          toast.error(error.message || "Gagal memproses data");
+          toast.error(error.message || "Gagal menyimpan data", {
+            description: error.details 
+          });
         }
+      } else if (error instanceof Error) {
+        toast.error(error.message);
       }
     }
   }),
   defaultOptions: {
     queries: {
-      retry: (count, e) => !(e instanceof ApiError && e.status < 500) && count < 2,
+      retry: (count, e: unknown) => {
+        if (e instanceof ApiError) return e.status >= 500 && count < 2;
+        return count < 2;
+      },
     },
   },
 });
@@ -48,7 +55,7 @@ createRoot(document.getElementById("root")!).render(
           <App />
         </TooltipProvider>
       </BrowserRouter>
-      <Toaster position="top-right" />
+      <Toaster position="top-right" closeButton /> 
     </QueryClientProvider>
   </StrictMode>,
 );

@@ -5,13 +5,11 @@ import {
   useNavigate,
   type Location,
 } from "react-router-dom";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { pageTitle } from "@/lib/app";
-import { errorMessage } from "@/lib/errors";
 import { useLogin, useMe } from "../hooks/useAuth";
 
 export function LoginPage() {
@@ -34,7 +32,6 @@ export function LoginPage() {
       },
       {
         onSuccess: () => navigate(from, { replace: true }),
-        onError: (err) => toast.error(errorMessage(err)),
       },
     );
   }

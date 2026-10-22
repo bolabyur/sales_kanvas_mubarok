@@ -32,7 +32,7 @@ export function BatchForm({ open, onOpenChange, batch }: Props) {
         expired_date: new Date(text(fd, "expired_date")).toISOString(), 
         stok_gudang: num(fd, "stok_gudang") 
       },
-      { onSuccess: () => { toast.success(batch ? "Batch diperbarui" : "Batch ditambahkan"); handleOpenChange(false); }, onError: (err) => { setErrors(fieldErrors(err)); toast.error(errorMessage(err)); } }
+      { onSuccess: () => {  handleOpenChange(false); }, onError: (err) => { setErrors(fieldErrors(err)); toast.error(errorMessage(err)); } }
     );
   }
 

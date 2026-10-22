@@ -1,7 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, Pencil } from "lucide-react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -16,7 +15,6 @@ import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { SelectInput } from "@/components/shared/select-input";
 import { usePermission } from "@/auth/hooks/usePermission";
 import { formatDate} from "@/lib/format";
-import { errorMessage } from "@/lib/errors";
 import { usePlan, useUpdatePlanStatus } from "../hooks/usePlan";
 import { PLAN_STATUSES, type Plan, type PlanStatus } from "../types/plan.types";
 import { PlanStatusBadge, STATUS_LABEL } from "./plan-status-badge";
@@ -217,10 +215,8 @@ function StatusControl({ plan }: { plan: Plan }) {
             { id: plan.id, status: next },
             {
               onSuccess: () => {
-                toast.success(`Status diubah ke ${STATUS_LABEL[next]}`);
                 setNext("");
               },
-              onError: (err) => toast.error(errorMessage(err)),
             },
           )
         }

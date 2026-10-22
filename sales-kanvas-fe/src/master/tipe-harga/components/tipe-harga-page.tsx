@@ -1,14 +1,12 @@
 import { useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Plus } from "lucide-react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { DataTable } from "@/components/shared/data-table";
 import { RowActions } from "@/components/shared/row-actions";
 import { SearchInput } from "@/components/shared/search-input";
 import { usePermission } from "@/auth/hooks/usePermission";
-import { errorMessage } from "@/lib/errors";
 import { useDeleteTipeHarga, useTipeHarga } from "../hooks/useTipeHarga";
 import type { TipeHarga } from "../types/tipe-harga.types";
 import { TipeHargaForm } from "./tipe-harga-form";
@@ -82,9 +80,7 @@ export function TipeHargaPage() {
         description={`"${deleting?.nama_tipe}" akan dihapus.`}
         isPending={remove.isPending}
         onConfirm={() =>
-          deleting && remove.mutate(deleting.id, {
-            onSuccess: () => { toast.success("Tipe Harga dihapus"); setDeleting(null); },
-            onError: (err) => toast.error(errorMessage(err)),
+          deleting && remove.mutate(deleting.id, {           
           })
         }
       />

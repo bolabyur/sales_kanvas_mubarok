@@ -1,7 +1,6 @@
 import { useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Plus } from "lucide-react";
-import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
@@ -10,7 +9,6 @@ import { RowActions } from "@/components/shared/row-actions";
 import { SearchInput } from "@/components/shared/search-input";
 import { usePermission } from "@/auth/hooks/usePermission";
 import { formatRupiah } from "@/lib/format";
-import { errorMessage } from "@/lib/errors";
 import { useDeleteProduct, useProducts } from "../hooks/useProduct";
 import type { Product } from "../types/product.types";
 import { ProductForm } from "./product-form";
@@ -113,10 +111,8 @@ export function ProductPage() {
           deleting &&
           remove.mutate(deleting.id, {
             onSuccess: () => {
-              toast.success("Produk dihapus");
               setDeleting(null);
             },
-            onError: (err) => toast.error(errorMessage(err)),
           })
         }
       />
