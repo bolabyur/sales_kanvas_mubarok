@@ -121,7 +121,11 @@ export class PlanService {
   }
 
   async update(id: number, data: UpdatePlanDto, userId: number, ip: string) {
-    await this.findOne(id);
+    const plan = await this.findOne(id);
+    
+    if (plan.status === PLAN_STATUS.BATAL) {
+      throw new BadRequestException('Plan yang sudah dibatalkan tidak dapat diubah.');
+    }
     
     const updateData: Prisma.SalesKanvasPlanUncheckedUpdateInput = {
       user_id: userId,
@@ -142,10 +146,23 @@ export class PlanService {
   }
 
   async updateStatus(id: number, data: UpdateStatusPlanDto, userId: number, ip: string) {
-    await this.findOne(id);
+    const plan = await this.findOne(id);
+    
+    if (plan.status === PLAN_STATUS.BATAL) {
+      throw new BadRequestException('Plan sudah dibatalkan, status tidak bisa diubah lagi.');
+    }
+    if (plan.status === PLAN_STATUS.KOMPLIT) {
+      throw new BadRequestException('Plan sudah selesai, status tidak bisa diubah lagi.');
+    }
+
     return this.prisma.salesKanvasPlan.update({
       where: { id },
-      data: { status: data.status, user_id: userId, ip: ip },
+      data: { 
+        status: data.status, 
+        cancelled_at: data.status === PLAN_STATUS.BATAL ? new Date() : plan.cancelled_at,
+        user_id: userId, 
+        ip: ip 
+      },
     });
   }
 }

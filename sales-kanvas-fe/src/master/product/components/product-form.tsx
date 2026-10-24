@@ -89,53 +89,79 @@ export function ProductForm({ open, onOpenChange, product }: Props) {
   }
 
   return (
-    <Modal open={open} onOpenChange={handleOpenChange} title={product ? "Ubah Produk" : "Tambah Produk"} className="sm:max-w-2xl">
-      <form onSubmit={onSubmit} className="grid gap-4 sm:grid-cols-2 max-h-[75vh] overflow-y-auto px-1">
-        <FormField label="Nama" htmlFor="name" required error={errors.name} className="sm:col-span-2">
-          <Input id="name" name="name" required autoFocus defaultValue={product?.name} aria-invalid={!!errors.name} />
-        </FormField>
-        <FormField label="Kode" htmlFor="code" required error={errors.code}>
-          <Input id="code" name="code" required defaultValue={product?.code} aria-invalid={!!errors.code} />
-        </FormField>
-        <FormField label="Barcode" htmlFor="barcode" required error={errors.barcode}>
-          <Input id="barcode" name="barcode" required defaultValue={product?.barcode} aria-invalid={!!errors.barcode} />
-        </FormField>
-
-        {REF_FIELDS.map((f) => (
-          <FormField key={f.name} label={f.label} htmlFor={f.name} required={"required" in f} hint={"hint" in f ? f.hint : undefined} error={errors[f.name]}>
-            <Input id={f.name} name={f.name} type="number" min={1} required={"required" in f} defaultValue={product?.[f.name] ?? ""} aria-invalid={!!errors[f.name]} />
+    <Modal 
+      open={open} 
+      onOpenChange={handleOpenChange} 
+      title={product ? "Ubah Produk" : "Tambah Produk"} 
+      className="max-w-[95vw] md:max-w-5xl" // <-- LANDSCAPE (Lebar)
+    >
+      <form onSubmit={onSubmit} className="grid gap-6 sm:grid-cols-3 max-h-[80vh] overflow-y-auto px-1 pb-4">
+        
+        {/* SECTION 1: INFO DASAR */}
+        <div className="sm:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-4 border p-4 rounded-lg bg-muted/20">
+          <FormField label="Nama Produk" htmlFor="name" required error={errors.name} className="sm:col-span-3">
+            <Input id="name" name="name" required autoFocus defaultValue={product?.name} aria-invalid={!!errors.name} />
           </FormField>
-        ))}
+          <FormField label="Kode Produk" htmlFor="code" required error={errors.code}>
+            <Input id="code" name="code" required defaultValue={product?.code} aria-invalid={!!errors.code} />
+          </FormField>
+          <FormField label="Barcode" htmlFor="barcode" required error={errors.barcode}>
+            <Input id="barcode" name="barcode" required defaultValue={product?.barcode} aria-invalid={!!errors.barcode} />
+          </FormField>
+          <FormField label="Tipe Harga Dasar" htmlFor="type_price" required error={errors.type_price}>
+            <SelectInput id="type_price" name="type_price" required options={TYPE_PRICE_OPTIONS} defaultValue={product?.type_price ?? "FIXED"} />
+          </FormField>
+        </div>
 
-        <FormField label="Tipe Harga" htmlFor="type_price" required error={errors.type_price}>
-          <SelectInput id="type_price" name="type_price" required options={TYPE_PRICE_OPTIONS} defaultValue={product?.type_price ?? "FIXED"} />
-        </FormField>
-        <FormField label="HPP (Rp)" htmlFor="hpp" error={errors.hpp}>
-          <Input id="hpp" name="hpp" type="number" min={0} step="0.01" defaultValue={product?.hpp ?? ""} aria-invalid={!!errors.hpp} />
-        </FormField>
-        <FormField label="Isian per kemasan" htmlFor="isian" error={errors.isian}>
-          <Input id="isian" name="isian" type="number" step={1} defaultValue={product?.isian ?? ""} aria-invalid={!!errors.isian} />
-        </FormField>
-        <FormField label="Berat (gram)" htmlFor="weight" error={errors.weight}>
-          <Input id="weight" name="weight" type="number" step={1} defaultValue={product?.weight ?? ""} aria-invalid={!!errors.weight} />
-        </FormField>
-        <FormField label="Masa expired (hari)" htmlFor="expired_count" error={errors.expired_count}>
-          <Input id="expired_count" name="expired_count" type="number" step={1} defaultValue={product?.expired_count ?? ""} aria-invalid={!!errors.expired_count} />
-        </FormField>
+        {/* SECTION 2: RELASI MASTER DATA */}
+        <div className="sm:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-4 border p-4 rounded-lg bg-card">
+          <div className="sm:col-span-3 mb-2">
+            <h3 className="font-semibold text-sm">Relasi Master Data</h3>
+          </div>
+          {REF_FIELDS.map((f) => (
+            <FormField key={f.name} label={f.label} htmlFor={f.name} required={"required" in f} hint={"hint" in f ? f.hint : undefined} error={errors[f.name]}>
+              <Input id={f.name} name={f.name} type="number" min={1} required={"required" in f} defaultValue={product?.[f.name] ?? ""} aria-invalid={!!errors[f.name]} />
+            </FormField>
+          ))}
+        </div>
 
-        <label className="flex items-center gap-2 self-end text-sm sm:pb-2">
-          <input type="checkbox" name="is_active" defaultChecked={product?.is_active ?? true} className="size-4 accent-primary" />
-          Aktif <span className="text-xs text-muted-foreground">(nonaktif = hilang dari daftar)</span>
-        </label>
+        {/* SECTION 3: DETAIL TAMBAHAN */}
+        <div className="sm:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-4 border p-4 rounded-lg bg-card">
+          <div className="sm:col-span-3 mb-2">
+             <h3 className="font-semibold text-sm">Detail & Spesifikasi</h3>
+          </div>
+          <FormField label="HPP (Rp)" htmlFor="hpp" error={errors.hpp}>
+            <Input id="hpp" name="hpp" type="number" min={0} step="0.01" defaultValue={product?.hpp ?? ""} aria-invalid={!!errors.hpp} />
+          </FormField>
+          <FormField label="Isian per kemasan" htmlFor="isian" error={errors.isian}>
+            <Input id="isian" name="isian" type="number" step={1} defaultValue={product?.isian ?? ""} aria-invalid={!!errors.isian} />
+          </FormField>
+          <FormField label="Berat (gram)" htmlFor="weight" error={errors.weight}>
+            <Input id="weight" name="weight" type="number" step={1} defaultValue={product?.weight ?? ""} aria-invalid={!!errors.weight} />
+          </FormField>
+          <FormField label="Masa expired (hari)" htmlFor="expired_count" error={errors.expired_count}>
+            <Input id="expired_count" name="expired_count" type="number" step={1} defaultValue={product?.expired_count ?? ""} aria-invalid={!!errors.expired_count} />
+          </FormField>
+          
+          <div className="sm:col-span-3 flex items-center pt-2">
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" name="is_active" defaultChecked={product?.is_active ?? true} className="size-4 accent-primary" />
+              Status Aktif <span className="text-xs text-muted-foreground">(nonaktif = hilang dari daftar)</span>
+            </label>
+          </div>
+        </div>
 
-        <div className="sm:col-span-2 pt-4 mt-2 border-t">
-          <h3 className="font-semibold text-sm mb-4">Pengaturan Harga Jual</h3>
-          <div className="space-y-3">
-            {tipeHargaList.length === 0 && <p className="text-sm text-muted-foreground">Belum ada Tipe Harga. Buat di menu Tipe Harga.</p>}
+        {/* SECTION 4: HARGA JUAL (Dinamis berdasarkan Tipe Harga) */}
+        <div className="sm:col-span-3 border p-4 rounded-lg bg-card">
+          <h3 className="font-semibold text-sm mb-4 border-b pb-2">Pengaturan Harga Jual per Tipe</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            {tipeHargaList.length === 0 && (
+              <p className="text-sm text-muted-foreground col-span-full">Belum ada Tipe Harga. Silakan buat di menu Tipe Harga.</p>
+            )}
             {tipeHargaList.map((tipe) => (
-              <div key={tipe.id} className="flex items-center gap-4">
-                <label className="w-1/3 text-sm font-medium">{tipe.nama_tipe}</label>
-                <div className="relative flex-1">
+              <div key={tipe.id} className="space-y-2 border p-3 rounded-md bg-muted/10">
+                <label className="text-sm font-medium">{tipe.nama_tipe}</label>
+                <div className="relative">
                   <span className="absolute left-3 top-2.5 text-muted-foreground text-sm">Rp</span>
                   <Input
                     type="number"
@@ -150,9 +176,10 @@ export function ProductForm({ open, onOpenChange, product }: Props) {
           </div>
         </div>
 
-        <DialogFooter className="sm:col-span-2 sticky bottom-0 bg-background pt-2 mt-2">
+        {/* FOOTER */}
+        <DialogFooter className="sm:col-span-3 sticky bottom-0 bg-background pt-4 border-t mt-2">
           <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>Batal</Button>
-          <Button type="submit" disabled={save.isPending}>{save.isPending ? "Menyimpan…" : "Simpan"}</Button>
+          <Button type="submit" disabled={save.isPending}>{save.isPending ? "Menyimpan…" : "Simpan Produk"}</Button>
         </DialogFooter>
       </form>
     </Modal>

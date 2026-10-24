@@ -1,226 +1,135 @@
-import { useState, type ReactNode } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, Pencil } from "lucide-react";
+import { ArrowLeft, Calendar, MapPin, Truck, Users, Package } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableFooter,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { ConfirmDialog } from "@/components/shared/confirm-dialog";
-import { SelectInput } from "@/components/shared/select-input";
-import { usePermission } from "@/auth/hooks/usePermission";
-import { formatDate} from "@/lib/format";
-import { usePlan, useUpdatePlanStatus } from "../hooks/usePlan";
-import { PLAN_STATUSES, type Plan, type PlanStatus } from "../types/plan.types";
-import { PlanStatusBadge, STATUS_LABEL } from "./plan-status-badge";
+import { formatDate } from "@/lib/format";
+import { usePlan } from "../hooks/usePlan";
+import { PlanStatusBadge } from "./plan-status-badge";
 
 export function PlanDetailPage() {
   const planId = Number(useParams().id);
   const { data: plan, isLoading, isError } = usePlan(planId);
-  const canWrite = usePermission()("plan:write");
 
-  if (isLoading)
-    return <p className="text-sm text-muted-foreground">Memuat…</p>;
-  if (isError || !plan)
-    return (
-      <p className="text-sm text-muted-foreground">Plan tidak ditemukan.</p>
-    );
-
-  const editable = canWrite && plan.status !== "BATAL";
+  if (isLoading) return <div className="p-10 text-center text-muted-foreground">Memuat data rincian...</div>;
+  if (isError || !plan) return <div className="p-10 text-center text-red-500">Rencana Kanvas tidak ditemukan.</div>;
 
   return (
-    <div className="mx-auto grid max-w-4xl gap-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="grid gap-1">
-          <Link
-            to="/plan"
-            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft className="size-4" /> Daftar plan
-          </Link>
-          <div className="flex items-center gap-2">
-            <h2 className="text-xl font-semibold">{plan.invoice}</h2>
+    <div className="mx-auto max-w-5xl space-y-6 p-6">
+      
+      <div className="flex items-center gap-4">
+        <Button variant="outline" size="icon" render={<Link to="/plan" />}>
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
+        <div>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold">{plan.invoice}</h1>
             <PlanStatusBadge status={plan.status} />
           </div>
-          <p className="text-sm text-muted-foreground">
-            Revisi ke-{plan.revision}
+          <p className="text-sm text-muted-foreground mt-1">
+            Dibuat pada: {formatDate(plan.tgl_invoice)}
           </p>
         </div>
-        {editable && (
-          <div className="flex flex-wrap items-center gap-2">
-            <StatusControl plan={plan} />
-            <Button
-              variant="outline"
-              nativeButton={false}
-              render={<Link to={`/plan/${plan.id}/edit`} />}
-            >
-              <Pencil /> Revisi
-            </Button>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Informasi Perjalanan</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="flex items-start gap-3">
+            <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
+            <div>
+              <p className="text-sm font-medium">Tanggal Perjalanan</p>
+              <p className="text-sm text-muted-foreground">{formatDate(plan.tgl_pergi_kanvas)} s/d {plan.tgl_kembali_kanvas ? formatDate(plan.tgl_kembali_kanvas) : "Selesai"}</p>
+            </div>
           </div>
-        )}
+          <div className="flex items-start gap-3">
+            <MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
+            <div>
+              <p className="text-sm font-medium">Wilayah Pasar</p>
+              <p className="text-sm text-muted-foreground">{plan.marketArea?.name}</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <Truck className="h-5 w-5 text-muted-foreground mt-0.5" />
+            <div>
+              <p className="text-sm font-medium">Kendaraan</p>
+              <p className="text-sm text-muted-foreground">{plan.vehicle?.nopol} - {plan.vehicle?.name}</p>
+            </div>
+          </div>
+          {plan.note && (
+            <div className="md:col-span-3 bg-muted/50 p-3 rounded-md">
+              <p className="text-sm font-medium">Catatan:</p>
+              <p className="text-sm text-muted-foreground">{plan.note}</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center gap-2 pb-2">
+            <Users className="h-5 w-5 text-primary" />
+            <CardTitle className="text-lg">Tim Bertugas</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nama</TableHead>
+                  <TableHead>Posisi</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {plan.salesKanvasPersonil?.length ? (
+                  plan.salesKanvasPersonil.map((p: any) => (
+                    <TableRow key={p.id}>
+                      <TableCell className="font-medium">{p.employee?.name}</TableCell>
+                      <TableCell>{p.position}</TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow><TableCell colSpan={2} className="text-center">Tidak ada personil.</TableCell></TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center gap-2 pb-2">
+            <Package className="h-5 w-5 text-primary" />
+            <CardTitle className="text-lg">Barang Dibawa</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Produk</TableHead>
+                  <TableHead className="text-right">Qty</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {plan.salesKanvasPlanDetail?.length ? (
+                  plan.salesKanvasPlanDetail.map((d: any) => (
+                    <TableRow key={d.id}>
+                      <TableCell className="font-medium">{d.product?.name}</TableCell>
+                      <TableCell className="text-right">{d.qty}</TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow><TableCell colSpan={2} className="text-center">Tidak ada produk.</TableCell></TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
       </div>
-
-      {plan.status === "BATAL" && plan.revisi_to && (
-        <p className="rounded-lg border border-dashed p-3 text-sm">
-          Plan ini sudah direvisi menjadi{" "}
-          <Link
-            to={`/plan?search=${plan.revisi_to}`}
-            className="font-medium text-primary hover:underline"
-          >
-            {plan.revisi_to}
-          </Link>
-          .
-        </p>
-      )}
-
-      <dl className="grid gap-4 rounded-lg border p-4 text-sm sm:grid-cols-3">
-        <Info label="Tgl. Invoice">{formatDate(plan.tgl_invoice)}</Info>
-        <Info label="Tgl. Pergi">{formatDate(plan.tgl_pergi_kanvas)}</Info>
-        <Info label="Tgl. Kembali">{formatDate(plan.tgl_kembali_kanvas)}</Info>
-        <Info label="Market Area">{plan.marketArea.name}</Info>
-        <Info label="Kendaraan">
-          {plan.vehicle.nopol} — {plan.vehicle.name}
-        </Info>
-        <Info label="Dibatalkan">{formatDate(plan.cancelled_at)}</Info>
-        <Info label="Catatan" className="sm:col-span-3">
-          {plan.note || "-"}
-        </Info>
-      </dl>
-
-      <ItemsTable title="Personil" head={["Nama", "NIP", "Posisi"]}>
-        {plan.salesKanvasPersonil.map((p) => (
-          <TableRow key={p.id}>
-            <TableCell className="font-medium">{p.employee.name}</TableCell>
-            <TableCell>{p.employee.nip ?? "-"}</TableCell>
-            <TableCell>{p.position}</TableCell>
-          </TableRow>
-        ))}
-      </ItemsTable>
-
-      <ItemsTable title="Produk" head={["Kode", "Nama", "Qty"]}>
-        {plan.salesKanvasPlanDetail.map((d) => (
-          <TableRow key={d.id}>
-            <TableCell className="font-medium">{d.product.code}</TableCell>
-            <TableCell>{d.product.name}</TableCell>
-            <TableCell className="tabular-nums">{d.qty}</TableCell>
-          </TableRow>
-        ))}
-      </ItemsTable>
-
     </div>
-  );
-}
-
-function Info({
-  label,
-  className,
-  children,
-}: {
-  label: string;
-  className?: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className={className}>
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd className="font-medium">{children}</dd>
-    </div>
-  );
-}
-
-function ItemsTable({
-  title,
-  head,
-  footer,
-  children,
-}: {
-  title: string;
-  head: string[];
-  footer?: ReactNode;
-  children: ReactNode[];
-}) {
-  return (
-    <section className="grid gap-2">
-      <h3 className="font-medium">{title}</h3>
-      <div className="overflow-hidden rounded-lg border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              {head.map((h) => (
-                <TableHead key={h}>{h}</TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {children.length ? (
-              children
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={head.length}
-                  className="text-center text-muted-foreground"
-                >
-                  Tidak ada data.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-          {footer && children.length > 0 && <TableFooter>{footer}</TableFooter>}
-        </Table>
-      </div>
-    </section>
-  );
-}
-
-const SELECTABLE = PLAN_STATUSES.filter((s) => s !== "REVISI");
-
-function StatusControl({ plan }: { plan: Plan }) {
-  const update = useUpdatePlanStatus();
-  const [next, setNext] = useState<PlanStatus | "">("");
-
-  return (
-    <>
-      <SelectInput
-        aria-label="Ubah status"
-        className="w-40"
-        placeholder="Ubah status…"
-        value={next}
-        onValueChange={(v) => setNext(v as PlanStatus | "")}
-        options={SELECTABLE.filter((s) => s !== plan.status).map((s) => ({
-          value: s,
-          label: STATUS_LABEL[s],
-        }))}
-      />
-
-      <ConfirmDialog
-        open={!!next}
-        onOpenChange={(o) => !o && setNext("")}
-        title={`Ubah status ke ${next ? STATUS_LABEL[next] : ""}?`}
-        description={
-          next === "BATAL"
-            ? "Plan yang dibatalkan tidak bisa diubah statusnya atau direvisi lagi."
-            : `Status ${plan.invoice} akan diubah dari ${STATUS_LABEL[plan.status]}.`
-        }
-        confirmLabel="Ubah Status"
-        destructive={next === "BATAL"}
-        isPending={update.isPending}
-        onConfirm={() =>
-          next &&
-          update.mutate(
-            { id: plan.id, status: next },
-            {
-              onSuccess: () => {
-                setNext("");
-              },
-            },
-          )
-        }
-      />
-    </>
   );
 }

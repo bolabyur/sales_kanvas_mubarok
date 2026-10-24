@@ -14,9 +14,8 @@ import { GudangPage } from "./master/gudang/components/gudang-page";
 import { OutletPage } from "./master/outlet/components/outlet-page";
 import { BatchPage } from "@/master/batch/components/batch-page";
 
+import { PlanPage } from "@/plan/components/plan-page";
 import { PlanDetailPage } from "@/plan/components/plan-detail-page";
-import { PlanFormPage } from "@/plan/components/plan-form-page";
-import { PlanListPage } from "@/plan/components/plan-list-page";
 
 import { UserPage } from "@/master/user/components/user-page";
 import { RolePage } from "@/master/role/components/role-page";
@@ -43,12 +42,11 @@ export default function App() {
           <Route path="/master/market-area" element={<MarketAreaPage />} />
 
           <Route element={<RequirePermission permission="plan:read" />}>
-            <Route path="/plan" element={<PlanListPage />} />
+            <Route path="/plan" element={<PlanPage />} />
             <Route path="/plan/:id" element={<PlanDetailPage />} />
-            <Route element={<RequirePermission permission="plan:write" />}>
-              <Route path="/plan/new" element={<PlanFormPage />} />
-              <Route path="/plan/:id/edit" element={<PlanFormPage />} />
-            </Route>
+            <Route
+              element={<RequirePermission permission="plan:write" />}
+            ></Route>
 
             <Route path="/master/user" element={<UserPage />} />
             <Route path="/master/role" element={<RolePage />} />

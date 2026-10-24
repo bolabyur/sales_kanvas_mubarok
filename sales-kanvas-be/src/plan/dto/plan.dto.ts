@@ -2,11 +2,11 @@ import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
 export const PLAN_STATUS = {
-  DRAFT: 'Draft',
-  APPROVED: 'Approved',
-  ON_TRIP: 'On-Trip',
-  SETTLED: 'Settled',
-  BATAL: 'Batal', 
+  DRAFT: 'DRAFT',
+  DISETUJUI: 'DISETUJUI',
+  LOADING: 'LOADING',
+  KOMPLIT: 'KOMPLIT',
+  BATAL: 'BATAL',
 };
 
 export const createPlanSchema = z.object({
