@@ -19,7 +19,6 @@ export function PlanPage() {
   const plans = response?.items || []; 
   
   const updateStatus = useUpdatePlanStatus();
-  
   const canWrite = usePermission()("plan:create");
   const canCancel = usePermission()("plan:cancel"); 
 
@@ -32,7 +31,7 @@ export function PlanPage() {
       accessorKey: "invoice",
       header: "No. Invoice",
       cell: ({ row }) => (
-        <Link to={`/plan/${row.original.id}`} className="font-medium text-primary hover:underline">
+        <Link to={`/plan/${row.original.id}`} className="font-medium hover:underline text-primary">
           {row.original.invoice}
         </Link>
       ),
@@ -59,24 +58,23 @@ export function PlanPage() {
     },
     {
       id: "actions",
-      header: "Aksi",
       cell: ({ row }) => (
         <div className="flex items-center gap-1">
           <Button
             variant="ghost"
             size="icon"
-            className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
+            className="h-8 w-8 text-muted-foreground hover:text-primary"
             render={<Link to={`/plan/${row.original.id}`} />}
             title="Lihat Detail"
           >
             <Eye className="h-4 w-4" />
           </Button>
 
-          {canCancel && row.original.status !== "BATAL" && (
+          {canCancel && row.original.status?.toUpperCase() !== "BATAL" && (
             <Button
               variant="ghost"
               size="icon"
-              className="text-red-500 hover:text-red-700 hover:bg-red-50"
+              className="h-8 w-8 text-muted-foreground hover:text-destructive"
               onClick={() => setCancelling(row.original)}
               title="Batalkan Plan"
             >
@@ -105,19 +103,22 @@ export function PlanPage() {
             />
             {canWrite && (
               <Button className="ml-auto" onClick={() => setFormOpen(true)}>
-                <Plus /> Buat Plan
+                <Plus className="h-4 w-4 mr-2" /> Buat Plan
               </Button>
             )}
           </>
         }
       />
+      
       <PlanForm open={formOpen} onOpenChange={setFormOpen} />
       
       <ConfirmDialog
         open={!!cancelling}
         onOpenChange={(o) => !o && setCancelling(null)}
         title="Batalkan Rencana Kanvas?"
-        description={`Plan "${cancelling?.invoice}" akan diubah statusnya menjadi BATAL. Data historis tidak akan dihapus.`}
+        description={`Plan "${cancelling?.invoice}" akan diubah statusnya menjadi BATAL.`}
+        confirmLabel="Ya, Batalkan"
+        destructive={true}
         isPending={updateStatus.isPending}
         onConfirm={() =>
           cancelling &&

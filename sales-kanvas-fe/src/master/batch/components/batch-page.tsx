@@ -8,12 +8,12 @@ import { RowActions } from "@/components/shared/row-actions";
 import { SearchInput } from "@/components/shared/search-input";
 import { usePermission } from "@/auth/hooks/usePermission";
 import { formatDate } from "@/lib/format";
-import { useDeleteBatch, useBatch } from "../hooks/useBatch";
+import { useBatches, useDeleteBatch } from "../hooks/useBatch";
 import type { Batch } from "../types/batch.types";
 import { BatchForm } from "./batch-form";
 
 export function BatchPage() {
-  const { data = [], isLoading, isError } = useBatch();
+  const { data = [], isLoading, isError } = useBatches();
   const remove = useDeleteBatch();
   const canWrite = usePermission()("batch:write");
 
