@@ -12,6 +12,8 @@ import {
   Shield,
   Key,
   UserCog,
+  FileText,
+  PackageOpen,
   type LucideIcon,
 } from "lucide-react";
 
@@ -35,6 +37,24 @@ export const NAV: { label: string; items: NavItem[] }[] = [
         url: "/plan",
         icon: ClipboardList,
         permission: "plan:read",
+      },
+      {
+        title: "BON Barang",
+        url: "/transaksi/kasbon-produk",
+        icon: FileText,
+        permission: "kasbon-produk:read",
+      },
+      {
+        title: "Loading (Produk Out)",
+        url: "/transaksi/produk-out",
+        icon: Truck,
+        permission: "produk-out:read",
+      },
+      {
+        title: "Unloading (Produk In)",
+        url: "/transaksi/produk-in",
+        icon: PackageOpen,
+        permission: "produk-in:read",
       },
     ],
   },
