@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { cleanupOpenApiDoc } from 'nestjs-zod';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter'; // <-- 1. IMPORT FILTER
 
 process.on('warning', (warning) => {
   if (warning.name === 'DeprecationWarning' && warning.message.includes('client.query()')) {
@@ -20,6 +21,8 @@ async function bootstrap() {
   });
 
   app.setGlobalPrefix('api');
+
+  app.useGlobalFilters(new AllExceptionsFilter());
 
   const config = new DocumentBuilder()
     .setTitle('Sales Kanvas API')

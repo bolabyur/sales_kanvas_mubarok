@@ -454,6 +454,7 @@ model ProdukOut {
   kasbon_produk_id Int
   gudang_id        Int
   tgl_keluar       DateTime
+  tipe_sumber      String?
   is_deleted       Boolean  @default(false)
   sync_status      String   @default("Pending")
   updated_at       DateTime @updatedAt
@@ -622,6 +623,7 @@ model ProdukIn {
   sales_kanvas_plan_id Int
   gudang_id            Int
   tgl_masuk            DateTime
+  tipe_sumber          String? 
   is_deleted           Boolean  @default(false)
   sync_status          String   @default("Pending")
   updated_at           DateTime @updatedAt
