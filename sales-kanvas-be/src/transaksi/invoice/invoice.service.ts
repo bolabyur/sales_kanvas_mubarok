@@ -60,10 +60,21 @@ export class InvoiceService {
         });
       }
 
-      if (data.tipe_pembayaran === 'Kredit') {
+      // --- LOGIKA KARTU PIUTANG ---
+      console.log(`[TRACKER INVOICE] Tipe Pembayaran diterima: "${data.tipe_pembayaran}"`);
+      
+      if (data.tipe_pembayaran.toUpperCase() === 'KREDIT') {
+        console.log(`[TRACKER INVOICE] Membuat Kartu Piutang untuk Invoice ID: ${invoice.id}`);
         await tx.kartuPiutangOutlet.create({
-          data: { invoice_outlet_id: invoice.id, sisa_piutang: total_tagihan },
+          data: { 
+            invoice_outlet_id: invoice.id, 
+            sisa_piutang: total_tagihan,
+            jatuh_tempo: new Date(new Date().setDate(new Date().getDate() + 30))
+          },
         });
+        console.log(`[TRACKER INVOICE] Kartu Piutang BERHASIL dibuat!`);
+      } else {
+        console.log(`[TRACKER INVOICE] Dilewati karena tipe bukan KREDIT.`);
       }
 
       return invoice;

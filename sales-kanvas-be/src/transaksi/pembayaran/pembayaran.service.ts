@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreatePembayaranDto } from './dto/pembayaran.dto';
 
@@ -8,13 +8,13 @@ export class PembayaranService {
 
   async create(data: CreatePembayaranDto) {
     return this.prisma.$transaction(async (tx) => {
-      const piutang = await tx.kartuPiutangOutlet.findUnique({
+      // Cari Kartu Piutang
+      const kartuPiutang = await tx.kartuPiutangOutlet.findUnique({
         where: { invoice_outlet_id: data.invoice_outlet_id },
       });
 
-      if (!piutang) throw new NotFoundException('Kartu Piutang tidak ditemukan untuk invoice ini');
-      if (data.nominal_bayar > Number(piutang.sisa_piutang)) {
-        throw new BadRequestException(`Nominal bayar (${data.nominal_bayar}) melebihi sisa piutang (${piutang.sisa_piutang})`);
+      if (!kartuPiutang) {
+        throw new NotFoundException('Kartu Piutang tidak ditemukan untuk invoice ini');
       }
 
       const pembayaran = await tx.pembayaranInvoice.create({
@@ -26,9 +26,11 @@ export class PembayaranService {
         },
       });
 
+      const sisaPiutangBaru = kartuPiutang.sisa_piutang.toNumber() - data.nominal_bayar;
+      
       await tx.kartuPiutangOutlet.update({
-        where: { id: piutang.id },
-        data: { sisa_piutang: { decrement: data.nominal_bayar } },
+        where: { id: kartuPiutang.id },
+        data: { sisa_piutang: sisaPiutangBaru },
       });
 
       return pembayaran;
@@ -39,6 +41,7 @@ export class PembayaranService {
     return this.prisma.pembayaranInvoice.findMany({
       where: { is_deleted: false },
       include: { invoiceOutlet: true },
+      orderBy: { updated_at: 'desc' },
     });
   }
 }
