@@ -4,7 +4,12 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import * as bcrypt from "bcrypt";
 import * as pg from "pg";
 
-const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+const pool = new pg.Pool({ 
+  connectionString: process.env.DATABASE_URL,
+  max: 20,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 5000,
+});
 const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
 
 const ALL_PERMISSIONS = [
@@ -16,15 +21,15 @@ const ALL_PERMISSIONS = [
   "outlet:read", "outlet:create", "outlet:update", "outlet:delete",
   "tipe-harga:read", "tipe-harga:create", "tipe-harga:update", "tipe-harga:delete",
   "batch:read", "batch:create", "batch:update", "batch:delete",
+  "gudang:read", "gudang:create", "gudang:update", "gudang:delete",
   "invoice:read", "invoice:create", "invoice:update", "invoice:delete",
   "kasbon-produk:read", "kasbon-produk:create", "kasbon-produk:update", "kasbon-produk:delete",
   "produk-out:read", "produk-out:create", "produk-out:update", "produk-out:delete",
   "kasbon-operasional:read", "kasbon-operasional:create", "kasbon-operasional:update", "kasbon-operasional:delete",
   "produk-in:read", "produk-in:create", "produk-in:update", "produk-in:delete",
   "settlement:read", "settlement:create", "settlement:update", "settlement:delete",
-  "gudang:read", "gudang:create", "gudang:update", "gudang:delete",
   "retur:read", "retur:create", "retur:update", "retur:delete",
-  "pembayaran:read", "pembayaran:create", "pembayaran:update", "pembayaran:delete",
+  "pembayaran:read", "pembayaran:create", "pembayaran:write", "pembayaran:update", "pembayaran:delete",
   "user:read", "user:create", "user:update", "user:delete",
   "role:read", "role:create", "role:update", "role:delete",
   "permission:read"
@@ -45,7 +50,8 @@ const ROLE_MAPPING: Record<string, string[]> = {
     "invoice:read", "invoice:create", 
     "pembayaran:read", "pembayaran:create",
     "retur:read", "retur:create",
-    "kasbon-operasional:read", "kasbon-operasional:create"
+    "kasbon-operasional:read", "kasbon-operasional:create",
+    "kasbon-produk:read", "kasbon-produk:create"
   ],
 
   "Admin Gudang Distribusi": [
@@ -53,7 +59,8 @@ const ROLE_MAPPING: Record<string, string[]> = {
     "produk-out:read", "produk-out:create",
     "produk-in:read", "produk-in:create", 
     "batch:read", "batch:update",
-    "gudang:read"
+    "gudang:read",
+    "retur:read", "retur:create", "retur:write" 
   ],
 
   "Admin Gudang Retur": [
@@ -63,7 +70,8 @@ const ROLE_MAPPING: Record<string, string[]> = {
 
   "Kasir / Tim Keuangan": [
     "settlement:read", "settlement:create", "settlement:update",
-    "pembayaran:read",
+    "pembayaran:read", "pembayaran:create", "pembayaran:write", 
+    "invoice:read", 
     "kasbon-operasional:read", "kasbon-operasional:update",
     "plan:read"
   ]
@@ -113,38 +121,48 @@ async function main() {
     },
   });
 
-  const superAdminRole = await prisma.role.findUniqueOrThrow({ where: { name: "Super Admin" } });
-  const salesRole = await prisma.role.findUniqueOrThrow({ where: { name: "Tim Sales Kanvas" } });
+  const roles = await prisma.role.findMany();
+  const getRoleId = (name: string) => roles.find(r => r.name === name)!.id;
+
+  const passwordHash = await bcrypt.hash("password", 10);
 
   await prisma.user.upsert({
     where: { username: "superadmin" },
     update: { karyawan_id: employee.id },
-    create: {
-      username: "superadmin",
-      password: await bcrypt.hash("password", 10),
-      name: "Super Administrator",
-      role_id: superAdminRole.id,
-      karyawan_id: employee.id,
-    },
+    create: { username: "superadmin", password: passwordHash, name: "Super Administrator", role_id: getRoleId("Super Admin"), karyawan_id: employee.id },
   });
 
   await prisma.user.upsert({
     where: { username: "sales" },
-    update: { karyawan_id: employee.id, role_id: salesRole.id },
-    create: {
-      username: "sales",
-      password: await bcrypt.hash("password", 10),
-      name: "Nama Sales Admin",
-      role_id: salesRole.id,
-      karyawan_id: employee.id,
-    },
+    update: { karyawan_id: employee.id },
+    create: { username: "sales", password: passwordHash, name: "Sales Satu", role_id: getRoleId("Tim Sales Kanvas"), karyawan_id: employee.id },
   });
 
-  console.log(`\n🎉 Seeding selesai! Silakan login dengan:`);
-  console.log(`   - Superadmin (password: password)`);
-  console.log(`   - Sales (password: password)`);
+  await prisma.user.upsert({
+    where: { username: "sales2" },
+    update: { karyawan_id: employee.id },
+    create: { username: "sales2", password: passwordHash, name: "Sales Dua", role_id: getRoleId("Tim Sales Kanvas"), karyawan_id: employee.id },
+  });
+
+  await prisma.user.upsert({
+    where: { username: "gudang" },
+    update: { karyawan_id: employee.id },
+    create: { username: "gudang", password: passwordHash, name: "Admin Gudang", role_id: getRoleId("Admin Gudang Distribusi"), karyawan_id: employee.id },
+  });
+
+  await prisma.user.upsert({
+    where: { username: "kasir" },
+    update: { karyawan_id: employee.id },
+    create: { username: "kasir", password: passwordHash, name: "Kasir", role_id: getRoleId("Kasir / Tim Keuangan"), karyawan_id: employee.id },
+  });
+
+  console.log(`\n🎉 Seeding selesai! User yang tersedia (password: password):`);
+  console.log(`   - superadmin, sales, sales2, gudang, kasir`);
 }
 
 main()
   .catch((e) => { console.error(e); process.exit(1); })
-  .finally(() => prisma.$disconnect());
+  .finally(async () => {
+    await prisma.$disconnect();
+    await pool.end();
+  });
