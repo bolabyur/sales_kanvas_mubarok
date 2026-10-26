@@ -1,14 +1,14 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateInvoiceDto } from './dto/invoice.dto';
+import { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface'; 
 
 @Injectable()
 export class InvoiceService {
   constructor(private prisma: PrismaService) {}
 
-  async create(data: CreateInvoiceDto) {
+  async create(data: CreateInvoiceDto, userId: number) {
     return this.prisma.$transaction(async (tx) => {
-
       const outlet = await tx.outlet.findUnique({ where: { id: data.outlet_id } });
       if (!outlet) throw new NotFoundException('Outlet ID tidak ditemukan');
       
@@ -60,21 +60,14 @@ export class InvoiceService {
         });
       }
 
-      // --- LOGIKA KARTU PIUTANG ---
-      console.log(`[TRACKER INVOICE] Tipe Pembayaran diterima: "${data.tipe_pembayaran}"`);
-      
       if (data.tipe_pembayaran.toUpperCase() === 'KREDIT') {
-        console.log(`[TRACKER INVOICE] Membuat Kartu Piutang untuk Invoice ID: ${invoice.id}`);
         await tx.kartuPiutangOutlet.create({
           data: { 
             invoice_outlet_id: invoice.id, 
             sisa_piutang: total_tagihan,
-            jatuh_tempo: new Date(new Date().setDate(new Date().getDate() + 30))
+            jatuh_tempo: new Date(new Date().setDate(new Date().getDate() + 30)) 
           },
         });
-        console.log(`[TRACKER INVOICE] Kartu Piutang BERHASIL dibuat!`);
-      } else {
-        console.log(`[TRACKER INVOICE] Dilewati karena tipe bukan KREDIT.`);
       }
 
       return invoice;
@@ -84,7 +77,41 @@ export class InvoiceService {
   async findAll() {
     return this.prisma.invoiceOutlet.findMany({
       where: { is_deleted: false },
-      include: { outlet: true, detailInvoiceOutlets: { include: { produk: true, batch: true } }, kartuPiutangOutlet: true },
+      include: { 
+        outlet: true, 
+        detailInvoiceOutlets: { include: { produk: true, batch: true } }, 
+        kartuPiutangOutlet: true 
+      },
+      orderBy: { tgl_invoice: 'desc' }
     });
+  }
+
+  async findOne(id: number, user: AuthenticatedUser) {
+    const invoice = await this.prisma.invoiceOutlet.findUnique({
+      where: { id },
+      include: {
+        outlet: true,
+        salesKanvasPlan: true,
+        detailInvoiceOutlets: { include: { produk: true, batch: true } },
+        kartuPiutangOutlet: true,
+        pembayaranInvoices: true,
+        invoiceReturProduks: { include: { detailInvoiceReturs: true } },
+      },
+    });
+
+    if (!invoice) throw new NotFoundException('Invoice tidak ditemukan');
+
+    const roleName = user.role.name.toLowerCase();
+    const isGlobalRole = ['superadmin', 'super admin', 'kasir', 'supervisor'].includes(roleName);
+
+    if (!isGlobalRole) {
+      if (roleName.includes('sales')) {
+        if (invoice.salesKanvasPlan?.user_id !== user.id) {
+          throw new NotFoundException('Invoice tidak ditemukan'); 
+        }
+      }
+    }
+
+    return invoice;
   }
 }
