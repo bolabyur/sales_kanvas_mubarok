@@ -25,6 +25,7 @@ import { formatDate } from "@/lib/format";
 import { usePermission } from "@/auth/hooks/usePermission";
 import { usePlan, useUpdatePlanStatus } from "../hooks/usePlan";
 import { PlanStatusBadge } from "./plan-status-badge";
+import { PlanTransactions } from "./plan-transactions";
 import { useState } from "react";
 
 export function PlanDetailPage() {
@@ -33,9 +34,7 @@ export function PlanDetailPage() {
   const updateStatus = useUpdatePlanStatus();
   const canApprove = usePermission()("plan:approve");
 
-  const [confirmAction, setConfirmAction] = useState<
-    "DISETUJUI" | "BATAL" | null
-  >(null);
+  const [confirmAction, setConfirmAction] = useState<"DISETUJUI" | "BATAL" | null>(null);
 
   if (isLoading)
     return (
@@ -50,7 +49,6 @@ export function PlanDetailPage() {
       </div>
     );
 
-  // PERBAIKAN: Menggunakan .toUpperCase() agar aman dari perbedaan kapitalisasi (Draft vs DRAFT)
   const isEditable = plan.status.toUpperCase() === "DRAFT" && canApprove;
 
   return (
@@ -72,7 +70,6 @@ export function PlanDetailPage() {
           </div>
         </div>
 
-        {/* TOMBOL UBAH STATUS (Hanya muncul jika status DRAFT dan user punya izin) */}
         {isEditable && (
           <div className="flex gap-2">
             <Button
@@ -80,8 +77,7 @@ export function PlanDetailPage() {
               onClick={() => setConfirmAction("BATAL")}
               disabled={updateStatus.isPending}
             >
-              <XCircle className="mr-2 h-4 w-4 text-muted-foreground" />{" "}
-              Batalkan
+              <XCircle className="mr-2 h-4 w-4 text-muted-foreground" /> Batalkan
             </Button>
             <Button
               onClick={() => setConfirmAction("DISETUJUI")}
@@ -104,9 +100,7 @@ export function PlanDetailPage() {
               <p className="text-sm font-medium">Tanggal Perjalanan</p>
               <p className="text-sm text-muted-foreground">
                 {formatDate(plan.tgl_pergi_kanvas)} s/d{" "}
-                {plan.tgl_kembali_kanvas
-                  ? formatDate(plan.tgl_kembali_kanvas)
-                  : "Selesai"}
+                {plan.tgl_kembali_kanvas ? formatDate(plan.tgl_kembali_kanvas) : "Selesai"}
               </p>
             </div>
           </div>
@@ -114,9 +108,7 @@ export function PlanDetailPage() {
             <MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
             <div>
               <p className="text-sm font-medium">Wilayah Pasar</p>
-              <p className="text-sm text-muted-foreground">
-                {plan.marketArea?.name}
-              </p>
+              <p className="text-sm text-muted-foreground">{plan.marketArea?.name}</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
@@ -155,17 +147,13 @@ export function PlanDetailPage() {
                 {plan.salesKanvasPersonil?.length ? (
                   plan.salesKanvasPersonil.map((p: any) => (
                     <TableRow key={p.id}>
-                      <TableCell className="font-medium">
-                        {p.employee?.name}
-                      </TableCell>
+                      <TableCell className="font-medium">{p.employee?.name}</TableCell>
                       <TableCell>{p.position}</TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={2} className="text-center">
-                      Tidak ada personil.
-                    </TableCell>
+                    <TableCell colSpan={2} className="text-center">Tidak ada personil.</TableCell>
                   </TableRow>
                 )}
               </TableBody>
@@ -190,17 +178,13 @@ export function PlanDetailPage() {
                 {plan.salesKanvasPlanDetail?.length ? (
                   plan.salesKanvasPlanDetail.map((d: any) => (
                     <TableRow key={d.id}>
-                      <TableCell className="font-medium">
-                        {d.product?.name}
-                      </TableCell>
+                      <TableCell className="font-medium">{d.product?.name}</TableCell>
                       <TableCell className="text-right">{d.qty}</TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={2} className="text-center">
-                      Tidak ada produk.
-                    </TableCell>
+                    <TableCell colSpan={2} className="text-center">Tidak ada produk.</TableCell>
                   </TableRow>
                 )}
               </TableBody>
@@ -209,24 +193,19 @@ export function PlanDetailPage() {
         </Card>
       </div>
 
+      {/* TAMBAHAN: Menampilkan BON & Invoice Terkait Plan Ini */}
+      <PlanTransactions plan={plan} />
+
       <ConfirmDialog
         open={!!confirmAction}
         onOpenChange={(o) => !o && setConfirmAction(null)}
-        title={
-          confirmAction === "DISETUJUI"
-            ? "Setujui Rencana Kanvas?"
-            : "Batalkan Rencana Kanvas?"
-        }
+        title={confirmAction === "DISETUJUI" ? "Setujui Rencana Kanvas?" : "Batalkan Rencana Kanvas?"}
         description={
           confirmAction === "DISETUJUI"
             ? "Plan ini akan disetujui dan siap diproses oleh Admin Gudang."
             : "Plan ini akan dibatalkan dan tidak bisa dilanjutkan."
         }
-        // PERBAIKAN: Ubah label tombol konfirmasi
-        confirmLabel={
-          confirmAction === "DISETUJUI" ? "Ya, Setujui" : "Ya, Batalkan"
-        }
-        // PERBAIKAN: Hanya beri warna merah jika aksinya adalah Batalkan
+        confirmLabel={confirmAction === "DISETUJUI" ? "Ya, Setujui" : "Ya, Batalkan"}
         destructive={confirmAction === "BATAL"}
         isPending={updateStatus.isPending}
         onConfirm={() => {
@@ -235,9 +214,7 @@ export function PlanDetailPage() {
               { id: plan.id, status: confirmAction },
               {
                 onSuccess: () => {
-                  toast.success(
-                    `Status berhasil diubah menjadi ${confirmAction}`,
-                  );
+                  toast.success(`Status berhasil diubah menjadi ${confirmAction}`);
                   setConfirmAction(null);
                 },
               },
