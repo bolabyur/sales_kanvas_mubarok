@@ -25,6 +25,10 @@ import { PembayaranModule } from './transaksi/pembayaran/pembayaran.module';
 import { UserModule } from './master/user/user.module';
 import { RoleModule } from './master/role/role.module';
 import { PermissionModule } from './master/permission/permission.module';
+import { KanvasReturnModule } from './transaksi/kanvas-return/kanvas-return.module';
+import { ProdukDestructionModule } from './transaksi/produk-destruction/produk-destruction.module';
+import { SummaryModule } from './summary/summary.module';
+
 
 
 @Module({
@@ -53,6 +57,9 @@ import { PermissionModule } from './master/permission/permission.module';
     UserModule,
     RoleModule,
     PermissionModule,
+    KanvasReturnModule,
+    ProdukDestructionModule,
+    SummaryModule,
   ],
   providers: [{ provide: APP_INTERCEPTOR, useClass: ResponseInterceptor }],
 })
