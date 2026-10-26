@@ -121,13 +121,15 @@ model Product {
 
   salesKanvasPlanDetail SalesKanvasPlanDetail[]
 
-  produkHargas         ProdukHarga[]
-  batches              Batch[]
-  detailKasbonProduks  DetailKasbonProduk[]
-  detailInvoiceOutlets DetailInvoiceOutlet[]
-  detailInvoiceReturs  DetailInvoiceReturProduk[]
-  detailProdukOuts     DetailProdukOut[]
-  detailProdukIns      DetailProdukIn[]
+  produkHargas             ProdukHarga[]
+  batches                  Batch[]
+  detailKasbonProduks      DetailKasbonProduk[]
+  detailInvoiceOutlets     DetailInvoiceOutlet[]
+  detailInvoiceReturs      DetailInvoiceReturProduk[]
+  detailProdukOuts         DetailProdukOut[]
+  detailProdukIns          DetailProdukIn[]
+  kanvasReturnDetails      KanvasReturnDetail[]
+  produkDestructionDetails ProdukDestructionDetail[]
 
   @@index([is_active])
   @@index([product_brand_id])
@@ -222,6 +224,7 @@ model SalesKanvasPlan {
   invoiceOutlets       InvoiceOutlet[]
   produkIns            ProdukIn[]
   settlements          Settlement[]
+  kanvasReturns        KanvasReturn[]
 
   @@index([invoice])
   @@map("ts_sales_kanvas_plan")
@@ -289,6 +292,8 @@ model Gudang {
   produkOuts          ProdukOut[]
   invoiceReturProduks InvoiceReturProduk[]
   produkIns           ProdukIn[]
+  kanvasReturns       KanvasReturn[]
+  produkDestructions  ProdukDestruction[]
 
   @@map("gudang")
 }
@@ -353,13 +358,15 @@ model Batch {
   sync_status  String   @default("Pending")
   updated_at   DateTime @updatedAt
 
-  produk               Product                    @relation(fields: [produk_id], references: [id])
-  detailKasbonProduks  DetailKasbonProduk[]
-  detailProdukOuts     DetailProdukOut[]
-  detailInvoiceOutlets DetailInvoiceOutlet[]
-  detailInvoiceReturs  DetailInvoiceReturProduk[]
-  detailProdukIns      DetailProdukIn[]
-  mutasiBatches        MutasiBatch[]
+  produk                   Product                    @relation(fields: [produk_id], references: [id])
+  detailKasbonProduks      DetailKasbonProduk[]
+  detailProdukOuts         DetailProdukOut[]
+  detailInvoiceOutlets     DetailInvoiceOutlet[]
+  detailInvoiceReturs      DetailInvoiceReturProduk[]
+  detailProdukIns          DetailProdukIn[]
+  mutasiBatches            MutasiBatch[]
+  kanvasReturnDetails      KanvasReturnDetail[]
+  produkDestructionDetails ProdukDestructionDetail[]
 
   @@unique([produk_id, no_batch])
   @@index([expired_date])
@@ -388,6 +395,8 @@ model KasbonOperasional {
   sales_kanvas_plan_id Int
   nominal_kasbon       Decimal  @default(0) @db.Decimal(15, 2)
   status               String   @default("Pending")
+  user_id              Int      @default(1)
+  ip                   String   @default("127.0.0.1")
   is_deleted           Boolean  @default(false)
   sync_status          String   @default("Pending")
   updated_at           DateTime @updatedAt
@@ -419,6 +428,8 @@ model KasbonProduk {
   uuid                 String   @unique @default(uuid())
   sales_kanvas_plan_id Int
   status               String   @default("Pending")
+  user_id              Int      @default(1)
+  ip                   String   @default("127.0.0.1")
   is_deleted           Boolean  @default(false)
   sync_status          String   @default("Pending")
   updated_at           DateTime @updatedAt
@@ -454,7 +465,9 @@ model ProdukOut {
   kasbon_produk_id Int
   gudang_id        Int
   tgl_keluar       DateTime
-  tipe_sumber      String?
+  source_type      String?
+  user_id          Int      @default(1)
+  ip               String   @default("127.0.0.1")
   is_deleted       Boolean  @default(false)
   sync_status      String   @default("Pending")
   updated_at       DateTime @updatedAt
@@ -623,7 +636,9 @@ model ProdukIn {
   sales_kanvas_plan_id Int
   gudang_id            Int
   tgl_masuk            DateTime
-  tipe_sumber          String? 
+  source_type          String?
+  user_id              Int      @default(1)
+  ip                   String   @default("127.0.0.1")
   is_deleted           Boolean  @default(false)
   sync_status          String   @default("Pending")
   updated_at           DateTime @updatedAt
@@ -691,4 +706,81 @@ model Settlement {
   approver        Employee?       @relation(fields: [approved_by], references: [id])
 
   @@map("settlement")
+}
+
+model KanvasReturn {
+  id                   Int      @id @default(autoincrement())
+  uuid                 String   @unique @default(uuid())
+  sales_kanvas_plan_id Int
+  gudang_tujuan_id     Int
+  tgl_retur            DateTime
+  status               String   @default("DRAFT") 
+  user_id              Int
+  ip                   String
+  is_deleted           Boolean  @default(false)
+  sync_status          String   @default("Pending")
+  updated_at           DateTime @updatedAt
+
+  salesKanvasPlan SalesKanvasPlan      @relation(fields: [sales_kanvas_plan_id], references: [id])
+  gudangTujuan    Gudang               @relation(fields: [gudang_tujuan_id], references: [id])
+  details         KanvasReturnDetail[]
+
+  @@map("kanvas_return")
+}
+
+model KanvasReturnDetail {
+  id               Int      @id @default(autoincrement())
+  uuid             String   @unique @default(uuid())
+  kanvas_return_id Int
+  batch_id         Int
+  produk_id        Int
+  qty              Int
+  kondisi          String 
+  alasan           String?
+  is_deleted       Boolean  @default(false)
+  sync_status      String   @default("Pending")
+  updated_at       DateTime @updatedAt
+
+  kanvasReturn KanvasReturn @relation(fields: [kanvas_return_id], references: [id])
+  batch        Batch        @relation(fields: [batch_id], references: [id])
+  produk       Product      @relation(fields: [produk_id], references: [id])
+
+  @@map("kanvas_return_detail")
+}
+
+model ProdukDestruction {
+  id              Int      @id @default(autoincrement())
+  uuid            String   @unique @default(uuid())
+  gudang_id       Int
+  tgl_destruction DateTime
+  status          String   @default("DRAFT") 
+  alasan          String
+  user_id         Int
+  ip              String
+  is_deleted      Boolean  @default(false)
+  sync_status     String   @default("Pending")
+  updated_at      DateTime @updatedAt
+
+  gudang  Gudang                    @relation(fields: [gudang_id], references: [id])
+  details ProdukDestructionDetail[]
+
+  @@map("produk_destruction")
+}
+
+model ProdukDestructionDetail {
+  id                    Int      @id @default(autoincrement())
+  uuid                  String   @unique @default(uuid())
+  produk_destruction_id Int
+  batch_id              Int
+  produk_id             Int
+  qty_dimusnahkan       Int
+  is_deleted            Boolean  @default(false)
+  sync_status           String   @default("Pending")
+  updated_at            DateTime @updatedAt
+
+  produkDestruction ProdukDestruction @relation(fields: [produk_destruction_id], references: [id])
+  batch             Batch             @relation(fields: [batch_id], references: [id])
+  produk            Product           @relation(fields: [produk_id], references: [id])
+
+  @@map("produk_destruction_detail")
 }
