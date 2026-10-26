@@ -1,12 +1,5 @@
 import { 
-  Controller, 
-  Get, 
-  Post, 
-  Body, 
-  UseGuards, 
-  Patch, 
-  Param, 
-  ParseIntPipe 
+  Controller, Get, Post, Body, UseGuards, Patch, Param, ParseIntPipe 
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { KasbonProdukService } from './kasbon-produk.service';
@@ -37,6 +30,12 @@ export class KasbonProdukController {
   @RequirePermission('kasbon-produk:read')
   findAll() {
     return this.kasbonProdukService.findAll();
+  }
+
+  @Get(':id')
+  @RequirePermission('kasbon-produk:read')
+  findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.kasbonProdukService.findOne(id);
   }
 
   @Patch(':id/update-status')

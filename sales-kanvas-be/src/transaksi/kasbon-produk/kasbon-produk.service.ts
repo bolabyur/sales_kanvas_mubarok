@@ -11,14 +11,15 @@ export class KasbonProdukService {
       const plan = await tx.salesKanvasPlan.findUnique({ where: { id: data.sales_kanvas_plan_id } });
       if (!plan) throw new NotFoundException('Rencana Kanvas tidak ditemukan');
       if (plan.status !== 'DISETUJUI') {
-        throw new BadRequestException('BON hanya bisa dibuat jika Rencana Kanvas sudah disetujui Supervisor.');
+        throw new BadRequestException('BON hanya bisa dibuat jika Rencana Kanvas sudah disetujui.');
       }
 
-     
-      const bon = await tx.kasbonProduk.create({
+      const bonProduk = await tx.kasbonProduk.create({
         data: {
           sales_kanvas_plan_id: data.sales_kanvas_plan_id,
-          status: 'PENDING', 
+          status: 'PENDING',
+          user_id: userId,
+          ip: ip,
         },
       });
 
@@ -31,42 +32,83 @@ export class KasbonProdukService {
 
         await tx.detailKasbonProduk.create({
           data: {
-            kasbon_produk_id: bon.id,
+            kasbon_produk_id: bonProduk.id,
             produk_id: item.produk_id,
             batch_id: item.batch_id,
             qty_bawa: item.qty_bawa,
           },
         });
       }
-      return bon;
+
+      if (data.operasional && data.operasional.length > 0) {
+        const totalNominal = data.operasional.reduce((sum, item) => sum + item.nominal, 0);
+
+        const bonOperasional = await tx.kasbonOperasional.create({
+          data: {
+            sales_kanvas_plan_id: data.sales_kanvas_plan_id,
+            nominal_kasbon: totalNominal,
+            status: 'PENDING',
+            user_id: userId,
+            ip: ip,
+          },
+        });
+
+        for (const op of data.operasional) {
+          await tx.detailKasbonOperasional.create({
+            data: {
+              kasbon_operasional_id: bonOperasional.id,
+              nama_pengeluaran: op.nama_pengeluaran,
+              nominal: op.nominal,
+              foto_bukti: op.foto_bukti,
+            },
+          });
+        }
+      }
+
+      return tx.kasbonProduk.findUnique({
+        where: { id: bonProduk.id },
+        include: { detailKasbonProduks: true },
+      });
     });
+  }
+
+  async findOne(id: number) {
+    const bon = await this.prisma.kasbonProduk.findUnique({
+      where: { id, is_deleted: false },
+      include: {
+        salesKanvasPlan: true,
+        detailKasbonProduks: {
+          include: { produk: true, batch: true },
+        },
+        produkOuts: true, 
+      },
+    });
+    if (!bon) throw new NotFoundException('BON tidak ditemukan');
+    return bon;
   }
 
   async updateStatus(id: number, status: string, userId: number, ip: string) {
     const bon = await this.prisma.kasbonProduk.findUnique({ where: { id } });
     if (!bon) throw new NotFoundException('BON tidak ditemukan');
 
-    // PENGUNCIAN: Jika sudah disetujui, tidak bisa diubah
     if (bon.status === 'APPROVED') {
       throw new BadRequestException('BON yang sudah di-ACC tidak dapat diubah statusnya.');
     }
 
     return this.prisma.kasbonProduk.update({
       where: { id },
-      data: { 
-        status,
-      },
+      data: { status },
     });
   }
 
   async findAll() {
     return this.prisma.kasbonProduk.findMany({
       where: { is_deleted: false },
-      include: { 
-        salesKanvasPlan: true, 
-        detailKasbonProduks: { include: { produk: true, batch: true } } 
+      include: {
+        salesKanvasPlan: true,
+        detailKasbonProduks: { include: { produk: true, batch: true } },
       },
-      orderBy: { id: 'desc' } 
+      orderBy: { id: 'desc' },
     });
   }
 }
