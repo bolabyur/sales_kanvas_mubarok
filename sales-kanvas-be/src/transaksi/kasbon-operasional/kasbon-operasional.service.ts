@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateKasbonOperasionalDto } from './dto/kasbon-operasional.dto';
 
@@ -40,6 +40,31 @@ export class KasbonOperasionalService {
       include: {
         salesKanvasPlan: true,
         detailKasbonOperasional: true,
+      },
+      orderBy: { updated_at: 'desc' },
+    });
+  }
+
+  async updateStatus(id: number, status: string, userId: number, ip: string) {
+    const kasbon = await this.prisma.kasbonOperasional.findUnique({
+      where: { id },
+    });
+
+    if (!kasbon || kasbon.is_deleted) {
+      throw new NotFoundException('Kasbon Operasional tidak ditemukan');
+    }
+
+    const allowedStatuses = ['APPROVED', 'REJECTED'];
+    if (!allowedStatuses.includes(status.toUpperCase())) {
+      throw new BadRequestException('Status tidak valid. Gunakan APPROVED atau REJECTED');
+    }
+
+    return this.prisma.kasbonOperasional.update({
+      where: { id },
+      data: {
+        status: status.toUpperCase(),
+        user_id: userId, 
+        ip: ip,
       },
     });
   }
