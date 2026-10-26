@@ -6,15 +6,13 @@ import { CreateProdukInDto } from './dto/produk-in.dto';
 export class ProdukInService {
   constructor(private prisma: PrismaService) {}
 
-  async create(data: CreateProdukInDto) {
+  async create(data: CreateProdukInDto, userId: number, ip: string) {
     return this.prisma.$transaction(async (tx) => {
-      // 1. Validasi Gudang
       const gudang = await tx.gudang.findUnique({ where: { id: data.gudang_id } });
       if (!gudang || gudang.is_deleted) {
         throw new NotFoundException(`Gudang ID ${data.gudang_id} tidak ditemukan`);
       }
 
-      // 2. Validasi Plan
       const plan = await tx.salesKanvasPlan.findUnique({
         where: { id: data.sales_kanvas_plan_id },
       });
@@ -22,20 +20,18 @@ export class ProdukInService {
         throw new NotFoundException(`Sales Kanvas Plan ID ${data.sales_kanvas_plan_id} tidak ditemukan`);
       }
 
-      // 3. Validasi: Cek apakah Plan ini sudah pernah di-Unloading
-      // const existingProdukIn = await tx.produkIn.findFirst({
-      //   where: { 
-      //     sales_kanvas_plan_id: data.sales_kanvas_plan_id, 
-      //     is_deleted: false 
-      //   },
-      // });
-      // if (existingProdukIn) {
-      //   throw new BadRequestException(
-      //     `Plan ini sudah pernah di-Unloading (ID In: ${existingProdukIn.id}). Satu Plan hanya boleh di-Unloading satu kali.`
-      //   );
-      // }
+      const existingProdukIn = await tx.produkIn.findFirst({
+        where: { 
+          sales_kanvas_plan_id: data.sales_kanvas_plan_id, 
+          is_deleted: false 
+        },
+      });
+      if (existingProdukIn) {
+        throw new BadRequestException(
+          `Plan ini sudah pernah di-Unloading (ID In: ${existingProdukIn.id}). Satu Plan hanya boleh di-Unloading satu kali.`
+        );
+      }
 
-      // 4. Validasi Produk
       const produkIds = [...new Set(data.details.map((d) => d.produk_id))];
       const produkList = await tx.product.findMany({
         where: { id: { in: produkIds }, is_active: true },
@@ -48,17 +44,17 @@ export class ProdukInService {
         );
       }
 
-      // 5. Buat Header ProdukIn
       const produkIn = await tx.produkIn.create({
         data: {
           sales_kanvas_plan_id: data.sales_kanvas_plan_id,
           gudang_id: data.gudang_id,
           tgl_masuk: new Date(data.tgl_masuk),
-          tipe_sumber: data.tipe_sumber,
+          source_type: data.source_type,
+          user_id: userId,
+          ip: ip,
         },
       });
 
-      // 6. Iterasi Detail
       for (const item of data.details) {
         const existingBatch = await tx.batch.findUnique({
           where: {
@@ -79,7 +75,6 @@ export class ProdukInService {
           });
           batchId = newBatch.id;
         } else {
-          // Jika batch sudah ada, cek apakah ED-nya sama
           if (existingBatch.expired_date.getTime() !== new Date(item.expired_date).getTime()) {
             throw new BadRequestException(
               `Tanggal ED tidak sesuai dengan batch ${item.no_batch} yang sudah ada`
@@ -110,7 +105,7 @@ export class ProdukInService {
             batch_id: batchId,
             tipe_mutasi: 'IN',
             qty: item.qty_sisa,
-            keterangan: `${data.tipe_sumber} (Kondisi: ${item.kondisi}) - Plan #${data.sales_kanvas_plan_id}`,
+            keterangan: `${data.source_type} (Kondisi: ${item.kondisi}) - Plan #${data.sales_kanvas_plan_id}`, 
           },
         });
       }

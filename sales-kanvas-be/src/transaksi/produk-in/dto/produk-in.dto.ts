@@ -5,7 +5,7 @@ export const createProdukInSchema = z.object({
   sales_kanvas_plan_id: z.number().int().positive(),
   gudang_id: z.number().int().positive(),
   tgl_masuk: z.string().datetime(),
-  tipe_sumber: z.enum(['DARI_PRODUKSI', 'DARI_SALES_KANVAS', 'DARI_RETUR', 'DARI_SHOWROOM']),
+  source_type: z.enum(['PRODUKSI', 'SALES_KANVAS', 'TOKO', 'RETUR', 'SHOWROOM']), 
   details: z.array(
     z.object({
       produk_id: z.number().int().positive(),

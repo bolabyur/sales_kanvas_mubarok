@@ -5,6 +5,8 @@ import { CreateProdukInDto } from './dto/produk-in.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permission.guard';
 import { RequirePermission } from '../../common/decorators/require-permission.decorator';
+import { CurrentUser } from '../../auth/decorators/current-user.decorator';
+import { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
 
 @ApiTags('Transaksi - Unloading (Produk In)')
 @ApiBearerAuth('access-token')
@@ -14,9 +16,12 @@ export class ProdukInController {
   constructor(private readonly produkInService: ProdukInService) {}
 
   @Post()
-  @RequirePermission('produk-in:write')
-  create(@Body() dto: CreateProdukInDto) {
-    return this.produkInService.create(dto);
+  @RequirePermission('produk-in:create')
+  create(
+    @Body() dto: CreateProdukInDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.produkInService.create(dto, user.id, '127.0.0.1');
   }
 
   @Get()
