@@ -114,6 +114,20 @@ export class PlanService {
         marketArea: true,
         salesKanvasPersonil: { include: { employee: true } },
         salesKanvasPlanDetail: { include: { product: true } },
+        
+        invoiceOutlets: {
+          include: {
+            outlet: true,
+            detailInvoiceOutlets: { include: { produk: true, batch: true } },
+            kartuPiutangOutlet: true,
+          }
+        },
+        kasbonProduks: {
+          include: {
+            detailKasbonProduks: { include: { produk: true } }
+          }
+        },
+        kasbonOperasionals: true,
       },
     });
     if (!plan) throw new NotFoundException('Plan tidak ditemukan');
