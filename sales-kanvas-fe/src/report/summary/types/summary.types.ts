@@ -1,13 +1,23 @@
 export type SummarySale = {
-  periode: { start: string; end: string };
+  periode: {
+    start: string;
+    end: string;
+  };
   total_invoice: number;
   penjualan_bruto: number;
   total_retur: number;
   penjualan_neto: number;
-  rincian_pembayaran: { tipe: string; total: number }[];
+  
+  total_kasbon: number; 
+  total_piutang: number;
+
+  rincian_pembayaran: {
+    tipe: string;
+    total: number;
+  }[];
 };
 
-export type SummaryZona = {
+export type SummarySaleZona = {
   market_area_id: number;
   nama_zona: string;
   total_invoice: number;
@@ -25,7 +35,7 @@ export type SummaryRekonsiliasi = {
     outlet: string;
     zona: string;
     tgl_invoice: string;
-    jatuh_tempo: string | null;
+    jatuh_tempo: string;
     sisa_piutang: number;
     status: string;
   }[];

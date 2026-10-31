@@ -66,6 +66,11 @@ export function EmployeeForm({ open, onOpenChange, employee }: Props) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     setErrors({});
+
+    // PERBAIKAN: Pastikan tanggal valid ISO string
+    const rawTglLahir = text(fd, "tgl_lahir");
+    const rawTglMasuk = text(fd, "tgl_masuk");
+
     save.mutate(
       {
         id: employee?.id,
@@ -76,8 +81,9 @@ export function EmployeeForm({ open, onOpenChange, employee }: Props) {
         address: textOrNull(fd, "address"),
         gender: text(fd, "gender") as Gender,
         agama: text(fd, "agama"),
-        tgl_lahir: text(fd, "tgl_lahir"),
-        tgl_masuk: text(fd, "tgl_masuk"),
+        // Konversi ke ISO 8601 string lengkap
+        tgl_lahir: rawTglLahir ? new Date(rawTglLahir).toISOString() : "", 
+        tgl_masuk: rawTglMasuk ? new Date(rawTglMasuk).toISOString() : "",
         hari_libur_mingguan: numOrNull(fd, "hari_libur_mingguan"),
         employee_position_id: num(fd, "employee_position_id"),
         employee_job_id: num(fd, "employee_job_id"),
@@ -104,11 +110,10 @@ export function EmployeeForm({ open, onOpenChange, employee }: Props) {
       open={open}
       onOpenChange={handleOpenChange}
       title={employee ? "Ubah Karyawan" : "Tambah Karyawan"}
-      className="max-w-[95vw] md:max-w-5xl" // <-- LANDSCAPE
+      className="max-w-[95vw] md:max-w-5xl"
     >
       <form onSubmit={onSubmit} className="grid gap-6 max-h-[80vh] overflow-y-auto px-1 pb-4">
         
-        {/* SECTION 1: INFORMASI PRIBADI */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 border p-4 rounded-lg bg-muted/20">
           <div className="sm:col-span-3 mb-1">
             <h3 className="font-semibold text-sm">Informasi Pribadi</h3>
@@ -139,7 +144,6 @@ export function EmployeeForm({ open, onOpenChange, employee }: Props) {
           </FormField>
         </div>
 
-        {/* SECTION 2: DATA KEPEGAWAIAN */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 border p-4 rounded-lg bg-card">
           <div className="sm:col-span-3 mb-1">
             <h3 className="font-semibold text-sm">Data Kepegawaian & Referensi</h3>
@@ -157,7 +161,6 @@ export function EmployeeForm({ open, onOpenChange, employee }: Props) {
             />
           </FormField>
           
-          {/* Render REF_FIELDS */}
           {REF_FIELDS.map((f) => (
             <FormField
               key={f.name}
@@ -179,7 +182,6 @@ export function EmployeeForm({ open, onOpenChange, employee }: Props) {
           ))}
         </div>
 
-        {/* SECTION 3: STATUS */}
         <div className="border p-4 rounded-lg bg-card flex items-center justify-between">
           <div>
             <h3 className="font-semibold text-sm">Status Karyawan</h3>
@@ -196,7 +198,6 @@ export function EmployeeForm({ open, onOpenChange, employee }: Props) {
           </label>
         </div>
 
-        {/* FOOTER */}
         <DialogFooter className="sticky bottom-0 bg-background pt-4 border-t mt-2">
           <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
             Batal

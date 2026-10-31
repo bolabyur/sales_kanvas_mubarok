@@ -28,7 +28,6 @@ export function KasbonProdukPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [confirmData, setConfirmData] = useState<{ id: number; status: string } | null>(null);
   
-  // State untuk melihat rincian barang
   const [detailBon, setDetailBon] = useState<any | null>(null);
 
   const columns: ColumnDef<any>[] = [
@@ -36,7 +35,6 @@ export function KasbonProdukPage() {
       accessorKey: "id", 
       header: "ID BON",
       cell: ({ row }) => (
-        // PERBAIKAN: ID BON dibuat bisa diklik untuk melihat rincian
         <Button 
           variant="link" 
           className="p-0 h-auto font-medium text-primary"
@@ -55,13 +53,14 @@ export function KasbonProdukPage() {
       accessorKey: "status", 
       header: "Status",
       cell: ({ row }) => {
-        const rawStatus = row.original.status?.toUpperCase() || "PENDING";
-        let label = "Pending";
+        const rawStatus = row.original.status?.toUpperCase() || "DRAFT";
+        let label = "Draft";
         let variant: "default" | "secondary" | "outline" | "destructive" = "secondary";
         
-        if (rawStatus === "APPROVED") { label = "Disetujui"; variant = "default"; }
+        if (rawStatus === "DRAFT") { label = "Draft"; variant = "secondary"; }
+        else if (rawStatus === "APPROVED") { label = "Disetujui"; variant = "default"; }
         else if (rawStatus === "BATAL") { label = "Ditolak"; variant = "destructive"; }
-        else if (rawStatus === "LOADED") { label = "Loaded"; variant = "outline"; }
+        else if (rawStatus === "ONLOADING") { label = "Onloading"; variant = "outline"; }
 
         return <Badge variant={variant}>{label}</Badge>;
       }
@@ -70,11 +69,10 @@ export function KasbonProdukPage() {
       id: "actions",
       cell: ({ row }) => {
         const currentStatus = row.original.status?.toUpperCase();
-        const isPending = currentStatus === "PENDING";
+        const isDraft = currentStatus === "DRAFT" || currentStatus === "PENDING";
 
         return (
           <div className="flex items-center gap-1">
-            {/* Tombol Lihat Rincian */}
             <Button 
               variant="ghost" 
               size="icon" 
@@ -85,7 +83,7 @@ export function KasbonProdukPage() {
               <FileText className="h-4 w-4" />
             </Button>
 
-            {canApprove && isPending && (
+            {canApprove && isDraft && (
               <>
                 <Button 
                   variant="ghost" 
@@ -110,6 +108,7 @@ export function KasbonProdukPage() {
             )}
             
             {currentStatus === "APPROVED" && <span className="text-xs text-muted-foreground font-medium px-2">Terkunci</span>}
+            {currentStatus === "ONLOADING" && <span className="text-xs text-primary font-medium px-2">Barang Keluar</span>}
             {currentStatus === "BATAL" && <span className="text-xs text-destructive font-medium px-2">Ditolak</span>}
           </div>
         );
@@ -167,17 +166,28 @@ export function KasbonProdukPage() {
       {/* MODAL RINCIAN BARANG BON */}
       <Dialog open={!!detailBon} onOpenChange={(o) => !o && setDetailBon(null)}>
         <DialogContent className="sm:max-w-2xl">
-          <DialogHeader>
+          <DialogHeader className="space-y-2">
             <DialogTitle>Rincian Pengajuan BON #{detailBon?.id}</DialogTitle>
-            <DialogDescription>
-              Daftar barang yang diminta untuk Rencana Kanvas <strong>{detailBon?.salesKanvasPlan?.invoice}</strong>.
+            <DialogDescription className="space-y-1">
+              <span className="block">
+                Daftar barang yang diminta untuk Rencana Kanvas <strong>{detailBon?.salesKanvasPlan?.invoice}</strong>.
+              </span>
+              <span className="block">
+                Diajukan oleh: <strong className="text-primary">
+                  {detailBon?.salesKanvasPlan?.salesKanvasPersonil?.find(
+                    (p: any) => String(p.position).toLowerCase() === "sales"
+                  )?.employee?.name 
+                   || detailBon?.salesKanvasPlan?.salesKanvasPersonil?.[0]?.employee?.name 
+                   || "-"}
+                </strong>
+              </span>
             </DialogDescription>
           </DialogHeader>
 
-          <div className="border rounded-md">
+          <div className="border rounded-md mt-2">
             <Table>
               <TableHeader>
-                <TableRow>
+                <TableRow className="bg-muted/50 hover:bg-muted/50">
                   <TableHead>Produk</TableHead>
                   <TableHead>No. Batch</TableHead>
                   <TableHead className="text-right">Qty Diminta</TableHead>
@@ -188,8 +198,8 @@ export function KasbonProdukPage() {
                   detailBon.detailKasbonProduks.map((item: any, idx: number) => (
                     <TableRow key={idx}>
                       <TableCell className="font-medium">{item.produk?.name}</TableCell>
-                      <TableCell>{item.batch?.no_batch}</TableCell>
-                      <TableCell className="text-right">{item.qty_bawa}</TableCell>
+                      <TableCell>{item.batch?.no_batch || "-"}</TableCell>
+                      <TableCell className="text-right">{item.qty_bawa} pcs</TableCell>
                     </TableRow>
                   ))
                 ) : (
@@ -201,6 +211,13 @@ export function KasbonProdukPage() {
                 )}
               </TableBody>
             </Table>
+          </div>
+
+          <div className="bg-muted/30 p-4 rounded-md mt-2 flex justify-between items-center border">
+            <span className="font-medium text-sm">Total Item Diminta:</span>
+            <span className="text-lg font-bold text-primary">
+              {detailBon?.detailKasbonProduks?.reduce((sum: number, item: any) => sum + item.qty_bawa, 0) || 0} pcs
+            </span>
           </div>
         </DialogContent>
       </Dialog>

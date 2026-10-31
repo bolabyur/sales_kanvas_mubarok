@@ -1,4 +1,4 @@
-import { type SubmitEvent } from "react"; // <-- PERBAIKAN: Hapus useState
+import { type SubmitEvent } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { DialogFooter } from "@/components/ui/dialog";
@@ -14,17 +14,28 @@ import type { TipeSumberOut } from "../types/produk-out.types";
 type Props = { open: boolean; onOpenChange: (open: boolean) => void };
 
 const TIPE_SUMBER_OPTIONS = [
-  { value: "KE_SALES_KANVAS", label: "Ke Sales Kanvas" },
-  { value: "KE_PENJUALAN", label: "Ke Penjualan" },
-  { value: "KE_SALES_COUNTER", label: "Ke Sales Counter" },
-  { value: "KE_SHOWROOM", label: "Ke Showroom" },
+  { value: "SALES_KANVAS", label: "Ke Sales Kanvas" },
+  { value: "TOKO", label: "Ke Toko" },
+  { value: "SALES_COUNTER", label: "Ke Sales Counter" },
+  { value: "SHOWROOM", label: "Ke Showroom" },
 ];
 
 export function ProdukOutForm({ open, onOpenChange }: Props) {
   const create = useCreateProdukOut();
-  const { data: bonList = [] } = useKasbonProduks();
-  const pendingBons = bonList.filter((b: any) => b.status === "PENDING");
-  const { data: gudangList = [] } = useGudang(); 
+
+  const { data: bonResponse } = useKasbonProduks();
+
+  const bonList = Array.isArray(bonResponse)
+    ? bonResponse
+    : (bonResponse as any)?.items || (bonResponse as any)?.data?.items || [];
+
+  const availableBons = bonList.filter((b: any) => {
+    if (b.is_deleted) return false;
+    const status = (b.status || "").toUpperCase();
+    return ["PENDING", "DRAFT", "DISETUJUI", "APPROVED"].includes(status);
+  });
+
+  const { data: gudangList = [] } = useGudang();
 
   const handleOpenChange = (o: boolean) => {
     onOpenChange(o);
@@ -33,56 +44,100 @@ export function ProdukOutForm({ open, onOpenChange }: Props) {
   function onSubmit(e: SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
-    
-    create.mutate({
-      kasbon_produk_id: Number(fd.get("kasbon_produk_id")),
-      gudang_id: Number(fd.get("gudang_id")),
-      tgl_keluar: new Date(fd.get("tgl_keluar") as string).toISOString(),
-      tipe_sumber: fd.get("tipe_sumber") as TipeSumberOut,
-    }, {
-      onSuccess: () => {
-        toast.success("Loading berhasil diproses!");
-        handleOpenChange(false);
+
+    create.mutate(
+      {
+        kasbon_produk_id: Number(fd.get("kasbon_produk_id")),
+        gudang_id: Number(fd.get("gudang_id")),
+        tgl_keluar: new Date(fd.get("tgl_keluar") as string).toISOString(),
+        source_type: fd.get("source_type") as TipeSumberOut,
       },
-    });
+      {
+        onSuccess: () => {
+          toast.success("Loading berhasil diproses!");
+          handleOpenChange(false);
+        },
+      },
+    );
   }
 
   return (
-    <Modal open={open} onOpenChange={handleOpenChange} title="Proses Loading (Produk Out)" className="max-w-2xl">
+    <Modal
+      open={open}
+      onOpenChange={handleOpenChange}
+      title="Proses Loading (Produk Out)"
+      className="max-w-2xl"
+    >
       <form onSubmit={onSubmit} className="grid gap-6 p-1">
         <div className="grid gap-4 border p-4 rounded-lg bg-muted/20">
-          <FormField label="Pilih BON (Pending)" htmlFor="kasbon_produk_id" required>
-            <SelectInput 
-              id="kasbon_produk_id" 
-              name="kasbon_produk_id" 
-              required 
-              options={pendingBons.map((b: any) => ({ value: String(b.id), label: `BON #${b.id} - ${b.salesKanvasPlan?.invoice}` }))} 
-              placeholder={pendingBons.length === 0 ? "Tidak ada BON Pending" : "Pilih BON"}
+          <FormField
+            label="Pilih BON (Pending/Draft)"
+            htmlFor="kasbon_produk_id"
+            required
+          >
+            <SelectInput
+              id="kasbon_produk_id"
+              name="kasbon_produk_id"
+              required
+              options={availableBons.map((b: any) => ({
+                value: String(b.id),
+                label: `BON #${b.id} - ${b.salesKanvasPlan?.invoice || "No Plan"} (${b.status})`,
+              }))}
+              placeholder={
+                availableBons.length === 0
+                  ? "Tidak ada BON Pending"
+                  : "Pilih BON"
+              }
             />
           </FormField>
 
-          <FormField label="Pilih Gudang" htmlFor="gudang_id" required>
-            <SelectInput 
-              id="gudang_id" 
-              name="gudang_id" 
-              required 
-              options={gudangList.map((g: any) => ({ value: String(g.id), label: g.nama_gudang }))} 
+          <FormField label="Pilih Gudang Asal" htmlFor="gudang_id" required>
+            <SelectInput
+              id="gudang_id"
+              name="gudang_id"
+              required
+              options={
+                (gudangList as any[])?.map((g: any) => ({
+                  value: String(g.id),
+                  label: g.nama_gudang,
+                })) || []
+              }
               placeholder="Pilih Gudang"
             />
           </FormField>
 
           <FormField label="Tanggal Keluar" htmlFor="tgl_keluar" required>
-            <Input id="tgl_keluar" name="tgl_keluar" type="datetime-local" required defaultValue={new Date().toISOString().slice(0, 16)} />
+            <Input
+              id="tgl_keluar"
+              name="tgl_keluar"
+              type="datetime-local"
+              required
+              defaultValue={new Date().toISOString().slice(0, 16)}
+            />
           </FormField>
 
-          <FormField label="Sumber Pengeluaran" htmlFor="tipe_sumber" required>
-            <SelectInput id="tipe_sumber" name="tipe_sumber" required options={TIPE_SUMBER_OPTIONS} placeholder="Pilih Tipe Sumber" />
+          <FormField label="Sumber Pengeluaran" htmlFor="source_type" required>
+            <SelectInput
+              id="source_type"
+              name="source_type"
+              required
+              options={TIPE_SUMBER_OPTIONS}
+              placeholder="Pilih Tipe Sumber"
+            />
           </FormField>
         </div>
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>Batal</Button>
-          <Button type="submit" disabled={create.isPending}>{create.isPending ? "Memproses…" : "Proses Loading"}</Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => handleOpenChange(false)}
+          >
+            Batal
+          </Button>
+          <Button type="submit" disabled={create.isPending}>
+            {create.isPending ? "Memproses…" : "Proses Loading"}
+          </Button>
         </DialogFooter>
       </form>
     </Modal>

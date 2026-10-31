@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import type { ColumnDef } from "@tanstack/react-table";
-import { Plus, Ban, Eye } from "lucide-react";
+import type { ColumnDef, PaginationState } from "@tanstack/react-table";
+import { Plus, Ban, Eye, Copy, Search } from "lucide-react"; 
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { DataTable } from "@/components/shared/data-table";
-import { SearchInput } from "@/components/shared/search-input";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { usePermission } from "@/auth/hooks/usePermission";
 import { formatDate } from "@/lib/format";
@@ -15,16 +15,53 @@ import { PlanForm } from "./plan-form";
 import { PlanStatusBadge } from "./plan-status-badge";
 
 export function PlanPage() {
-  const { data: response, isLoading, isError } = usePlans();
+  // State untuk Server-Side Pagination
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 10,
+  });
+  
+  // State untuk Search dengan Debounce (Delay 500ms)
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      // Kembali ke halaman 1 setiap kali pencarian berubah
+      setPagination(prev => ({ ...prev, pageIndex: 0 }));
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Panggil Hook dengan parameter (Server-Side)
+  const { data: response, isLoading, isError } = usePlans(
+    pagination.pageIndex + 1, 
+    pagination.pageSize, 
+    debouncedSearch
+  );
+  
+  // PERBAIKAN: Ambil items dan total data
   const plans = response?.items || []; 
+  const totalData = response?.meta?.total || 0;
   
   const updateStatus = useUpdatePlanStatus();
   const canWrite = usePermission()("plan:create");
   const canCancel = usePermission()("plan:cancel"); 
 
-  const [search, setSearch] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const [cancelling, setCancelling] = useState<Plan | null>(null);
+  const [duplicatingPlan, setDuplicatingPlan] = useState<Plan | null>(null); 
+
+  const handleDuplicate = (plan: Plan) => {
+    setDuplicatingPlan(plan);
+    setFormOpen(true);
+  };
+
+  const handleFormOpenChange = (open: boolean) => {
+    setFormOpen(open);
+    if (!open) setDuplicatingPlan(null);
+  };
 
   const columns: ColumnDef<Plan>[] = [
     {
@@ -64,11 +101,24 @@ export function PlanPage() {
             variant="ghost"
             size="icon"
             className="h-8 w-8 text-muted-foreground hover:text-primary"
+            nativeButton={false} 
             render={<Link to={`/plan/${row.original.id}`} />}
             title="Lihat Detail"
           >
             <Eye className="h-4 w-4" />
           </Button>
+
+          {canWrite && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-muted-foreground hover:text-primary"
+              onClick={() => handleDuplicate(row.original)}
+              title="Duplikat Plan"
+            >
+              <Copy className="h-4 w-4" />
+            </Button>
+          )}
 
           {canCancel && row.original.status?.toUpperCase() !== "BATAL" && (
             <Button
@@ -93,14 +143,25 @@ export function PlanPage() {
         data={plans}
         isLoading={isLoading}
         isError={isError}
-        globalFilter={search}
+        
+        // PERBAIKAN: Gunakan prop 'server' sesuai dengan tipe data di komponen DataTable Anda
+        server={{
+          pagination: pagination,
+          onPaginationChange: setPagination,
+          rowCount: totalData, // Total keseluruhan baris dari database
+        }}
+
         toolbar={
           <>
-            <SearchInput
-              placeholder="Cari invoice / wilayah…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+            <div className="relative max-w-sm">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Cari invoice / wilayah…"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9"
+              />
+            </div>
             {canWrite && (
               <Button className="ml-auto" onClick={() => setFormOpen(true)}>
                 <Plus className="h-4 w-4 mr-2" /> Buat Plan
@@ -110,7 +171,11 @@ export function PlanPage() {
         }
       />
       
-      <PlanForm open={formOpen} onOpenChange={setFormOpen} />
+      <PlanForm 
+        open={formOpen} 
+        onOpenChange={handleFormOpenChange} 
+        defaultPlan={duplicatingPlan} 
+      />
       
       <ConfirmDialog
         open={!!cancelling}

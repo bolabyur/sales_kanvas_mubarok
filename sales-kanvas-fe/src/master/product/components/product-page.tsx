@@ -29,93 +29,46 @@ export function ProductPage() {
   };
 
   const columns: ColumnDef<Product>[] = [
-    {
-      accessorKey: "code",
-      header: "Kode",
-      cell: ({ row }) => (
-        <span className="font-medium">{row.original.code}</span>
-      ),
-    },
+    { accessorKey: "code", header: "Kode", cell: ({ row }) => <span className="font-medium">{row.original.code}</span> },
     { accessorKey: "name", header: "Nama" },
     { accessorKey: "barcode", header: "Barcode" },
-    {
-      accessorKey: "type_price",
-      header: "Tipe Harga",
+    { 
+      accessorKey: "type_price", 
+      header: "Tipe Harga", 
       cell: ({ row }) => (
         <Badge variant="outline">
-          {row.original.type_price === "FIXED" ? "Fixed" : "Persentase"}
+          {/* Fallback jika tipenya bukan FIXED/PERSENTASE */}
+          {row.original.type_price === "FIXED" ? "Fixed" : row.original.type_price === "PERSENTASE" ? "Persentase" : row.original.type_price || "-"}
         </Badge>
-      ),
+      ) 
     },
-    {
-      accessorKey: "hpp",
+    { 
+      accessorKey: "hpp", 
       header: () => <div className="text-right">HPP</div>,
-      cell: ({ row }) => (
-        <div className="text-right tabular-nums">
-          {formatRupiah(row.original.hpp)}
-        </div>
-      ),
+      cell: ({ row }) => <div className="text-right tabular-nums">{formatRupiah(row.original.hpp)}</div> 
     },
-    ...(canWrite
-      ? [
-          {
-            id: "actions",
-            cell: ({ row }) => (
-              <RowActions
-                onEdit={() => openForm(row.original)}
-                onDelete={() => setDeleting(row.original)}
-              />
-            ),
-          } satisfies ColumnDef<Product>,
-        ]
-      : []),
+    ...(canWrite ? [{ id: "actions", cell: ({ row }) => <RowActions onEdit={() => openForm(row.original)} onDelete={() => setDeleting(row.original)} /> } satisfies ColumnDef<Product>] : []),
   ];
 
   return (
     <>
-      <DataTable
-        columns={columns}
-        data={data}
-        isLoading={isLoading}
-        isError={isError}
-        globalFilter={search}
-        toolbar={
-          <>
-            <SearchInput
-              placeholder="Cari kode / nama / barcode…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            {canWrite && (
-              <Button className="ml-auto" onClick={() => openForm(null)}>
-                <Plus /> Tambah
-              </Button>
-            )}
-          </>
-        }
-      />
+      <DataTable columns={columns} data={data} isLoading={isLoading} isError={isError} globalFilter={search} toolbar={
+        <>
+          <SearchInput placeholder="Cari kode / nama / barcode…" value={search} onChange={(e) => setSearch(e.target.value)} />
+          {canWrite && <Button className="ml-auto" onClick={() => openForm(null)}><Plus /> Tambah</Button>}
+        </>
+      } />
 
+      {/* PERBAIKAN UTAMA: Tambahkan key={editing?.id} agar form selalu re-mount dengan data terbaru */}
       <ProductForm
+        key={editing?.id || "new"}
         open={formOpen}
         onOpenChange={setFormOpen}
         product={editing}
       />
 
-      <ConfirmDialog
-        open={!!deleting}
-        onOpenChange={(o) => !o && setDeleting(null)}
-        title="Hapus produk?"
-        description={`"${deleting?.name}" akan dihapus. Produk yang sudah dipakai plan tidak bisa dihapus — nonaktifkan lewat Ubah sebagai gantinya.`}
-        isPending={remove.isPending}
-        onConfirm={() =>
-          deleting &&
-          remove.mutate(deleting.id, {
-            onSuccess: () => {
-              setDeleting(null);
-            },
-          })
-        }
-      />
+      <ConfirmDialog open={!!deleting} onOpenChange={(o) => !o && setDeleting(null)} title="Hapus produk?" description={`"${deleting?.name}" akan dihapus.`} isPending={remove.isPending}
+        onConfirm={() => deleting && remove.mutate(deleting.id, { onSuccess: () => setDeleting(null) })} />
     </>
   );
 }

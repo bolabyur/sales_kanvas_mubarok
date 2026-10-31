@@ -1,114 +1,112 @@
 import { useState } from "react";
-import type { ColumnDef } from "@tanstack/react-table";
-import { Plus, FileText } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { DataTable } from "@/components/shared/data-table";
-import { SearchInput } from "@/components/shared/search-input";
-import { usePermission } from "@/auth/hooks/usePermission";
 import { formatDate } from "@/lib/format";
-import { useProdukOuts } from "../hooks/useProdukOut";
-import type { ProdukOut } from "../types/produk-out.types";
+import { Button } from "@/components/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { useProdukOut, useCancelProdukOut } from "../hooks/useProdukOut";
+import { XCircle, Plus } from "lucide-react";
 import { ProdukOutForm } from "./produk-out-form";
-import { ProdukOutDetail } from "./produk-out-detail"; // <-- Import komponen baru
 
 export function ProdukOutPage() {
-  const { data = [], isLoading, isError } = useProdukOuts();
-  const canWrite = usePermission()("produk-out:write");
-
-  const [search, setSearch] = useState("");
+  const { data: produkOuts = [], isLoading } = useProdukOut();
+  const cancelOut = useCancelProdukOut();
+  
+  const [selectedId, setSelectedId] = useState<number | null>(null);
   const [formOpen, setFormOpen] = useState(false);
-  const [detailData, setDetailData] = useState<ProdukOut | null>(null);
 
-  const columns: ColumnDef<ProdukOut>[] = [
-    {
-      accessorKey: "id",
-      header: "ID Out",
-      cell: ({ row }) => (
-        <span className="font-medium">#{row.original.id}</span>
-      ),
-    },
-    {
-      accessorKey: "kasbonProduk.invoice",
-      header: "BON Referensi",
-      cell: ({ row }) => (
-        <div className="flex flex-col">
-          {/* Fallback ke strip (-) jika invoice tidak ada */}
-          <span className="font-medium">
-            {row.original.kasbonProduk?.salesKanvasPlan?.invoice || "-"}
-          </span>
-          <span className="text-xs text-muted-foreground">
-            BON #{row.original.kasbon_produk_id}
-          </span>
-        </div>
-      ),
-    },
-    {
-      accessorKey: "tipe_sumber",
-      header: "Tipe Sumber",
-      cell: ({ row }) => {
-        // Cek jika tipe_sumber kosong (data lama)
-        const source = row.original.tipe_sumber;
-        return source ? (
-          <Badge variant="outline">{source}</Badge>
-        ) : (
-          <span className="text-muted-foreground">-</span>
-        );
-      },
-    },
-    {
-      accessorKey: "tgl_keluar",
-      header: "Tanggal Keluar",
-      cell: ({ row }) => formatDate(row.original.tgl_keluar),
-    },
-    {
-      id: "actions",
-      cell: ({ row }) => (
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 text-muted-foreground hover:text-primary"
-          onClick={() => setDetailData(row.original)}
-          title="Lihat Rincian"
-        >
-          <FileText className="h-4 w-4" />
-        </Button>
-      ),
-    },
-  ];
+  if (isLoading) return <div className="p-6">Memuat data Onloading...</div>;
 
   return (
-    <>
-      <DataTable
-        columns={columns}
-        data={data}
-        isLoading={isLoading}
-        isError={isError}
-        globalFilter={search}
-        toolbar={
-          <>
-            <SearchInput
-              placeholder="Cari data loading…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            {canWrite && (
-              <Button className="ml-auto" onClick={() => setFormOpen(true)}>
-                <Plus /> Proses Loading
-              </Button>
+    <div className="space-y-6 p-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Onloading (Pengeluaran Barang)</h1>
+          <p className="text-muted-foreground">Daftar barang yang sudah keluar dari Gudang menuju Sales.</p>
+        </div>
+        <Button onClick={() => setFormOpen(true)}>
+          <Plus className="mr-2 h-4 w-4" /> Proses Onloading
+        </Button>
+      </div>
+
+      <div className="border rounded-lg bg-card">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/50 hover:bg-muted/50">
+              <TableHead>No. Onloading</TableHead>
+              <TableHead>No. BON</TableHead>
+              <TableHead>Nama Sales</TableHead>
+              <TableHead className="text-right">Jenis Produk</TableHead>
+              <TableHead className="text-right">Total Qty</TableHead>
+              <TableHead>Tanggal Keluar</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Aksi</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {produkOuts.map((po: any) => {
+              // Ambil nama Sales dari relasi personil
+              const salesPersonil = po.kasbonProduk?.salesKanvasPlan?.salesKanvasPersonil?.find(
+                (p: any) => String(p.position).toLowerCase() === "sales"
+              );
+              const namaSales = salesPersonil?.employee?.name || "-";
+              
+              // Hitung jenis produk dan total qty
+              const jenisProduk = po.detailProdukOuts?.length || 0;
+              const totalQty = po.detailProdukOuts?.reduce((sum: number, item: any) => sum + item.qty, 0) || 0;
+
+              return (
+                <TableRow key={po.id}>
+                  <TableCell className="font-medium text-primary">ONL-{po.id}</TableCell>
+                  <TableCell>{po.kasbonProduk?.salesKanvasPlan?.invoice || `BON #${po.kasbon_produk_id}`}</TableCell>
+                  <TableCell>{namaSales}</TableCell>
+                  <TableCell className="text-right">{jenisProduk} Item</TableCell>
+                  <TableCell className="text-right font-bold">{totalQty} Pcs</TableCell>
+                  <TableCell>{formatDate(po.tgl_keluar)}</TableCell>
+                  <TableCell>
+                    <Badge variant={po.is_deleted ? "destructive" : "outline"} className={!po.is_deleted ? "border-green-500 text-green-600 bg-green-50" : ""}>
+                      {po.is_deleted ? "Dibatalkan" : "Selesai"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {!po.is_deleted && (
+                      <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10" onClick={() => setSelectedId(po.id)}>
+                        <XCircle className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+            {produkOuts.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={8} className="text-center py-6 text-muted-foreground">
+                  Belum ada data Onloading. Klik "Proses Onloading" untuk memulai.
+                </TableCell>
+              </TableRow>
             )}
-          </>
-        }
-      />
+          </TableBody>
+        </Table>
+      </div>
 
       <ProdukOutForm open={formOpen} onOpenChange={setFormOpen} />
 
-      {/* Panggil komponen detail di sini */}
-      <ProdukOutDetail
-        open={!!detailData}
-        onOpenChange={(o) => !o && setDetailData(null)}
-        data={detailData}
+      <ConfirmDialog
+        open={!!selectedId}
+        onOpenChange={(o) => !o && setSelectedId(null)}
+        title="Batalkan Onloading?"
+        description="Stok barang akan dikembalikan ke Gudang, dan status BON akan kembali menjadi DRAFT. Lanjutkan?"
+        confirmLabel="Ya, Batalkan"
+        destructive={true}
+        isPending={cancelOut.isPending}
+        onConfirm={() => {
+          if (selectedId) {
+            cancelOut.mutate(selectedId, {
+              onSuccess: () => setSelectedId(null)
+            });
+          }
+        }}
       />
-    </>
+    </div>
   );
 }

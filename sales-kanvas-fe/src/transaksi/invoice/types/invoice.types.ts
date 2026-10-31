@@ -1,8 +1,6 @@
 export type DetailInvoicePayload = {
   produk_id: number;
-  batch_id: number;
   qty: number;
-  harga_satuan: number;
 };
 
 export type InvoicePayload = {

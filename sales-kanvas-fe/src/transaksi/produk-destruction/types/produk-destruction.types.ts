@@ -19,4 +19,5 @@ export type ProdukDestruction = {
   alasan: string;
   gudang?: any;
   details?: any[];
+  petugas?: string; 
 };

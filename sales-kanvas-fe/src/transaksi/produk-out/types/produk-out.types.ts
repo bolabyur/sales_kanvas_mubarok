@@ -1,4 +1,4 @@
-export type TipeSumberOut = "KE_SALES_KANVAS" | "KE_PENJUALAN" | "KE_SALES_COUNTER" | "KE_SHOWROOM";
+export type TipeSumberOut = "TOKO" | "SALES_COUNTER" | "SALES_KANVAS";
 
 export type ProdukOut = {
   id: number;
@@ -6,8 +6,10 @@ export type ProdukOut = {
   kasbon_produk_id: number;
   gudang_id: number;
   tgl_keluar: string;
-  tipe_sumber: TipeSumberOut;
-  created_at: string;
+  source_type: TipeSumberOut | null; 
+  is_deleted: boolean;
+  sync_status: string;
+  updated_at: string;
   kasbonProduk?: any;
   detailProdukOuts?: any[];
 };
@@ -16,5 +18,5 @@ export type ProdukOutPayload = {
   kasbon_produk_id: number;
   gudang_id: number;
   tgl_keluar: string;
-  tipe_sumber: TipeSumberOut;
+  source_type: TipeSumberOut;
 };

@@ -1,5 +1,5 @@
 import { useState, type SubmitEvent } from "react";
-// toast dan errorMessage DIHAPUS karena sudah ditangani global handler
+import { toast } from "sonner"; 
 import { Button } from "@/components/ui/button";
 import { DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -16,31 +16,57 @@ export function BatchForm({ open, onOpenChange, batch }: { open: boolean; onOpen
   const { data: products = [] } = useProducts();
   const [errors, setErrors] = useState<FieldErrors>({});
 
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const maxDate = new Date();
+  maxDate.setMonth(maxDate.getMonth() + 5);
+
+  const todayString = today.toISOString().split("T")[0];
+  const maxDateString = maxDate.toISOString().split("T")[0];
+
   const handleOpenChange = (o: boolean) => { if (!o) setErrors({}); onOpenChange(o); };
 
   function onSubmit(e: SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     setErrors({});
+
+    const dateString = text(fd, "expired_date");
+    const inputExpiredDate = new Date(dateString);
+    
+    if (dateString) {
+      if (inputExpiredDate < today) {
+        return toast.error("Tanggal expired tidak boleh di masa lalu.");
+      }
+      if (inputExpiredDate > maxDate) {
+        return toast.error("Tanggal expired maksimal 5 bulan dari hari ini.");
+      }
+    }
+
     save.mutate(
       { 
         id: batch?.id, 
         produk_id: num(fd, "produk_id"), 
         no_batch: text(fd, "no_batch"), 
-        expired_date: new Date(text(fd, "expired_date")).toISOString(), 
+        expired_date: inputExpiredDate.toISOString(), 
         stok_gudang: num(fd, "stok_gudang") 
       },
       { 
         onSuccess: () => { handleOpenChange(false); }, 
-        // PERBAIKAN: Tambahkan : any pada err
-        onError: (err: any) => { setErrors(fieldErrors(err)); } 
+        onError: (err: any) => { 
+          setErrors(fieldErrors(err)); 
+          const msg = err.response?.data?.message || err.message;
+          toast.error("Gagal menyimpan", { description: Array.isArray(msg) ? msg[0].message : msg });
+        } 
       }
     );
   }
 
   return (
     <Modal open={open} onOpenChange={handleOpenChange} title={batch ? "Ubah Batch Stok" : "Tambah Batch Stok"} className="sm:max-w-lg">
-      <form onSubmit={onSubmit} className="grid gap-5">
+      {/* PERBAIKAN: Tambahkan noValidate agar tooltip browser mati */}
+      <form onSubmit={onSubmit} noValidate className="grid gap-5">
         
         <FormField label="Produk" htmlFor="produk_id" required error={errors.produk_id}>
           <SelectInput id="produk_id" name="produk_id" required options={products.map((p: any) => ({ value: String(p.id), label: p.name }))} defaultValue={batch?.produk_id.toString()} />
@@ -50,8 +76,17 @@ export function BatchForm({ open, onOpenChange, batch }: { open: boolean; onOpen
           <FormField label="No Batch (Sesuai Fisik)" htmlFor="no_batch" required error={errors.no_batch} hint="Ketik persis seperti di kemasan">
             <Input id="no_batch" name="no_batch" required placeholder="Contoh: LOT-A26X" defaultValue={batch?.no_batch} />
           </FormField>
-          <FormField label="Tanggal Expired" htmlFor="expired_date" required error={errors.expired_date}>
-            <Input id="expired_date" name="expired_date" type="date" required defaultValue={batch?.expired_date ? batch.expired_date.split("T")[0] : ""} />
+          
+          <FormField label="Tanggal Expired" htmlFor="expired_date" required error={errors.expired_date} hint="Maksimal 5 bulan ke depan">
+            <Input 
+              id="expired_date" 
+              name="expired_date" 
+              type="date" 
+              required 
+              min={todayString}     
+              max={maxDateString}    
+              defaultValue={batch?.expired_date ? batch.expired_date.split("T")[0] : ""} 
+            />
           </FormField>
         </div>
 

@@ -8,10 +8,24 @@ export type Plan = {
   tgl_kembali_kanvas: string | null;
   status: PlanStatus;
   note: string | null;
+  
+  market_area_id: number;
+  vehicle_id: number;
+  
   marketArea?: { name: string };
   vehicle?: { nopol: string; name: string };
-  salesKanvasPersonil: any[];
-  salesKanvasPlanDetail: any[];
+  salesKanvasPersonil?: any[];
+  salesKanvasPlanDetail?: any[];
+  
+  kasbonProduks?: any[];
+  invoiceOutlets?: any[];
+  settlements?: any[];
+  kanvasReturns?: any[];
+
+  approvalLog?: {
+    created_at: string;
+    user_id: number;
+  } | null;
 };
 
 export type PlanPayload = {

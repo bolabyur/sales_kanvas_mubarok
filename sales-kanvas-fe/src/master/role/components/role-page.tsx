@@ -32,6 +32,20 @@ export function RolePage() {
     setSelectedPermissions(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]);
   };
 
+  // FITUR BARU: Centang Semua per Modul
+  const toggleModule = (modulePerms: any[]) => {
+    const moduleIds = modulePerms.map(p => p.id);
+    const isAllSelected = moduleIds.every(id => selectedPermissions.includes(id));
+    
+    if (isAllSelected) {
+      // Jika sudah dicentang semua, hapus centangnya
+      setSelectedPermissions(prev => prev.filter(id => !moduleIds.includes(id)));
+    } else {
+      // Jika belum, centang semua
+      setSelectedPermissions(prev => [...new Set([...prev, ...moduleIds])]);
+    }
+  };
+
   const handleSave = () => {
     if (!newRoleName) return toast.error("Nama role tidak boleh kosong.");
     
@@ -46,6 +60,7 @@ export function RolePage() {
     });
   };
 
+  // Pengelompokan Modul & Diurutkan Berdasarkan Abjad
   const groupedPermissions = permissions.reduce((acc, p) => {
     const [module] = p.name.split(":");
     if (!acc[module]) acc[module] = [];
@@ -53,8 +68,11 @@ export function RolePage() {
     return acc;
   }, {} as Record<string, any[]>);
 
+  const sortedModules = Object.keys(groupedPermissions).sort();
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-[calc(100vh-8rem)]">
+      {/* KOLOM KIRI: LIST ROLE */}
       <div className="md:col-span-1 border rounded-xl flex flex-col overflow-hidden bg-card">       
         <div className="p-4 border-b bg-muted/50">
           <h3 className="font-semibold">Daftar Role</h3>
@@ -84,6 +102,8 @@ export function RolePage() {
           ))}
         </div>
       </div>
+
+      {/* KOLOM KANAN: FORM EDIT ROLE & PERMISSIONS */}
       <div className="md:col-span-2 border rounded-xl flex flex-col overflow-hidden bg-card">
         <div className="p-4 border-b flex items-end gap-4 bg-muted/50">
           <div className="flex-1">
@@ -102,26 +122,42 @@ export function RolePage() {
         <div className="flex-1 overflow-y-auto p-6">
           {loadPerms ? <p>Memuat permissions...</p> : (
             <div className="grid gap-6">
-              {Object.entries(groupedPermissions).map(([module, perms]) => (
-                <div key={module} className="space-y-2">
-                  <h4 className="font-semibold text-sm text-primary border-b pb-1">
-                    Modul: {module}
-                  </h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {perms.map((p) => (
-                      <label key={p.id} className="flex items-center gap-2 text-sm cursor-pointer">
-                        <input
-                          type="checkbox"
-                          className="size-4 accent-primary"
-                          checked={selectedPermissions.includes(p.id)}
-                          onChange={() => togglePermission(p.id)}
-                        />
-                        <span>{p.name}</span>
-                      </label>
-                    ))}
+              {sortedModules.map((module) => {
+                const perms = groupedPermissions[module];
+                const isAllSelected = perms.every(p => selectedPermissions.includes(p.id));
+
+                return (
+                  <div key={module} className="space-y-2 bg-muted/20 p-4 rounded-lg border">
+                    <div className="flex justify-between items-center border-b pb-2 mb-3">
+                      <h4 className="font-semibold text-sm text-primary uppercase tracking-wider">
+                        Modul: {module}
+                      </h4>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-7 text-xs"
+                        onClick={() => toggleModule(perms)}
+                      >
+                        {isAllSelected ? "Batal Pilih Semua" : "Pilih Semua"}
+                      </Button>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {perms.map((p) => (
+                        <label key={p.id} className="flex items-center gap-2 text-sm cursor-pointer p-1.5 hover:bg-muted rounded transition-colors">
+                          <input
+                            type="checkbox"
+                            className="size-4 accent-primary"
+                            checked={selectedPermissions.includes(p.id)}
+                            onChange={() => togglePermission(p.id)}
+                          />
+                          <span>{p.name.split(":")[1]}</span>
+                        </label>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

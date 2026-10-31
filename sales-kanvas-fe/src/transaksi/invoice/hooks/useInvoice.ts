@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRef } from "react"; 
 import { api } from "@/lib/api";
 import type { Invoice, InvoicePayload } from "../types/invoice.types";
 
@@ -11,13 +12,20 @@ export function useInvoices() {
 
 export function useCreateInvoice() {
   const qc = useQueryClient();
+  const idempotencyKey = useRef(crypto.randomUUID()); 
+
   return useMutation({
     mutationFn: (payload: InvoicePayload) =>
-      api<Invoice>(URL, { method: "POST", body: JSON.stringify(payload) }),
+      api<Invoice>(URL, { 
+        method: "POST", 
+        body: JSON.stringify(payload),
+        headers: { "x-idempotency-key": idempotencyKey.current } 
+      }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: KEY });
       qc.invalidateQueries({ queryKey: ["master", "batch"] });
       qc.invalidateQueries({ queryKey: ["summary"] });
+      idempotencyKey.current = crypto.randomUUID(); 
     },
   });
 }

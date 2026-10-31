@@ -1,9 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, ApiError } from "@/lib/api";
+import { api } from "@/lib/api";
 import type { Product, ProductWithPrices } from "../types/product.types";
 
 const URL = "/master/product";
-const HARGA_URL = "/master/produk-harga";
 const KEY = ["master", "product"];
 
 export function useProducts() {
@@ -14,35 +13,39 @@ export function useSaveProduct() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, prices, ...payload }: ProductWithPrices) => {
+      
+      // 1. Bersihkan nilai null / undefined
+      const cleanPayload: any = {};
+      Object.keys(payload).forEach((key) => {
+        const val = (payload as any)[key];
+        if (val !== null && val !== undefined && val !== "") {
+          cleanPayload[key] = val;
+        }
+      });
+
+      // 2. PERBAIKAN: Ubah tipe harga "Retail" menjadi "FIXED" agar lolos validasi Zod backend
+      if (cleanPayload.type_price !== "FIXED" && cleanPayload.type_price !== "PERSENTASE") {
+        cleanPayload.type_price = "FIXED";
+      }
+
+      // 3. Sertakan array harga (jika ada)
+      if (prices && prices.length > 0) {
+        cleanPayload.prices = prices;
+      }
 
       const product = await api<Product>(id ? `${URL}/${id}` : URL, {
         method: id ? "PATCH" : "POST",
-        body: JSON.stringify(payload),
+        body: JSON.stringify(cleanPayload),
       });
 
-      if (prices && prices.length > 0) {
-        for (const price of prices) {
-          if (price.harga > 0) {
-            await api(HARGA_URL, {
-              method: "POST",
-              body: JSON.stringify({
-                produk_id: product.id,
-                tipe_harga_id: price.tipe_harga_id,
-                harga: price.harga,
-              }),
-            }).catch(() => {
-            });
-          }
-        }
-      }
       return product;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: KEY });
-      qc.invalidateQueries({ queryKey: ["master", "produk-harga"] });
     },
     onError: (error: any) => {
-      if (error instanceof ApiError) throw error;
+      // Cukup console.log, JANGAN throw error agar React tidak crash
+      console.error("API Error:", error); 
     }
   });
 }

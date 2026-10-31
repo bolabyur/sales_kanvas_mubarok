@@ -1,4 +1,4 @@
-export type KasbonProdukStatus = "PENDING" | "APPROVED" | "BATAL";
+export type KasbonProdukStatus = 'DRAFT' | 'ONLOADING' | 'BATAL' | 'PENDING';
 
 export type KasbonProduk = {
   id: number;
@@ -8,11 +8,17 @@ export type KasbonProduk = {
   detailKasbonProduks?: any[];
 };
 
+export type DetailKasbonProdukPayload = {
+  produk_id: number;
+  qty_bawa: number;
+};
+
 export type KasbonProdukPayload = {
   sales_kanvas_plan_id: number;
-  details: {
-    produk_id: number;
-    batch_id: number;
-    qty_bawa: number;
-  }[];
+  details: DetailKasbonProdukPayload[];
+  operasional?: Array<{
+    nama_pengeluaran: string;
+    nominal: number;
+    foto_bukti: string;
+  }>;
 };

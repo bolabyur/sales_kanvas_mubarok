@@ -1,14 +1,24 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { Plan, PlanPayload, PlanStatus, PlanListResponse } from "../types/plan.types";
 
 const URL = "/plan";
 const KEY = ["plan"];
 
-export function usePlans() {
+// PERBAIKAN: Menerima parameter pagination & search
+export function usePlans(page: number = 1, limit: number = 10, search: string = "") {
   return useQuery({ 
-    queryKey: KEY, 
-    queryFn: () => api<PlanListResponse>(URL) 
+    queryKey: [...KEY, page, limit, search], 
+    queryFn: () => {
+      const params = new URLSearchParams({
+        page: String(page),
+        limit: String(limit),
+      });
+      if (search) params.append("search", search);
+      
+      return api<PlanListResponse>(`${URL}?${params.toString()}`);
+    },
+    placeholderData: keepPreviousData, // Mencegah tabel berkedip/blank saat ganti halaman
   });
 }
 

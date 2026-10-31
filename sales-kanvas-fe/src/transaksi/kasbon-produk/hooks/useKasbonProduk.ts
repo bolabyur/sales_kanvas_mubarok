@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRef } from "react";
 import { api } from "@/lib/api";
 import type { KasbonProduk, KasbonProdukPayload } from "../types/kasbon-produk.types";
 
@@ -11,10 +12,19 @@ export function useKasbonProduks() {
 
 export function useCreateKasbonProduk() {
   const qc = useQueryClient();
+  const idempotencyKey = useRef(crypto.randomUUID());
+
   return useMutation({
     mutationFn: (payload: KasbonProdukPayload) =>
-      api(URL, { method: "POST", body: JSON.stringify(payload) }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
+      api(URL, { 
+        method: "POST", 
+        body: JSON.stringify(payload),
+        headers: { "x-idempotency-key": idempotencyKey.current }
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: KEY });
+      idempotencyKey.current = crypto.randomUUID();
+    },
   });
 }
 

@@ -24,9 +24,26 @@ export function OutletPage() {
   const openForm = (row: Outlet | null) => { setEditing(row); setFormOpen(true); };
 
   const columns: ColumnDef<Outlet>[] = [
-    { accessorKey: "nama_toko", header: "Nama Toko", cell: ({ row }) => <span className="font-medium">{row.original.nama_toko}</span> },
-    { accessorKey: "alamat", header: "Alamat" },
-    { accessorKey: "tipeHarga.nama_tipe", header: "Tipe Harga", cell: ({ row }) => row.original.tipeHarga?.nama_tipe || "-" },
+    { 
+      accessorKey: "nama_toko", 
+      header: "Nama Toko", 
+      cell: ({ row }) => (
+        <span className="font-medium">
+          {/* Tambahkan fallback || "-" agar tidak kosong melompong */}
+          {row.original.nama_toko || "-"}
+        </span>
+      ) 
+    },
+    { 
+      accessorKey: "alamat", 
+      header: "Alamat",
+      cell: ({ row }) => row.original.alamat || "-"
+    },
+    { 
+      accessorKey: "tipeHarga.nama_tipe", 
+      header: "Tipe Harga", 
+      cell: ({ row }) => row.original.tipeHarga?.nama_tipe || "-" 
+    },
     ...(canWrite ? [{ id: "actions", cell: ({ row }) => <RowActions onEdit={() => openForm(row.original)} onDelete={() => setDeleting(row.original)} /> } satisfies ColumnDef<Outlet>] : []),
   ];
 
@@ -40,7 +57,7 @@ export function OutletPage() {
       } />
       <OutletForm open={formOpen} onOpenChange={setFormOpen} outlet={editing} />
       <ConfirmDialog open={!!deleting} onOpenChange={(o) => !o && setDeleting(null)} title="Hapus Outlet?" description={`"${deleting?.nama_toko}" akan dihapus.`} isPending={remove.isPending}
-        onConfirm={() => deleting && remove.mutate(deleting.id, { onSuccess: () => { setDeleting(null); }, })} />
+        onConfirm={() => deleting && remove.mutate(deleting.id, { onSuccess: () => { setDeleting(null); } })} />
     </>
   );
 }

@@ -12,6 +12,11 @@ import type { Invoice } from "../types/invoice.types";
 import { InvoiceForm } from "./invoice-form";
 import { InvoiceDetail } from "./invoice-detail";
 
+const toTitleCase = (str: string) => {
+  if (!str) return "-";
+  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+};
+
 export function InvoicePage() {
   const { data = [], isLoading, isError } = useInvoices();
   const canWrite = usePermission()("invoice:create");
@@ -28,7 +33,10 @@ export function InvoicePage() {
     { 
       accessorKey: "tipe_pembayaran", 
       header: "Tipe", 
-      cell: ({ row }) => <Badge variant={row.original.tipe_pembayaran.toUpperCase() === "TUNAI" ? "default" : "outline"}>{row.original.tipe_pembayaran}</Badge> 
+      cell: ({ row }) => {
+        const tipe = toTitleCase(row.original.tipe_pembayaran);
+        return <Badge variant={tipe === "Tunai" ? "default" : "outline"}>{tipe}</Badge>;
+      }
     },
     {
       id: "actions",

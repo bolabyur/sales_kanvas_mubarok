@@ -1,4 +1,4 @@
-export type TipeSumberIn = "DARI_PRODUKSI" | "DARI_SALES_KANVAS" | "DARI_RETUR" | "DARI_SHOWROOM";
+export type TipeSumberIn = "PRODUKSI" | "SALES_KANVAS" | "TOKO" | "RETUR" | "SHOWROOM";
 
 export type DetailProdukInPayload = {
   produk_id: number;
@@ -12,7 +12,7 @@ export type ProdukInPayload = {
   sales_kanvas_plan_id: number;
   gudang_id: number;
   tgl_masuk: string;
-  tipe_sumber: TipeSumberIn;
+  source_type: TipeSumberIn; 
   details: DetailProdukInPayload[];
 };
 
@@ -22,7 +22,10 @@ export type ProdukIn = {
   sales_kanvas_plan_id: number;
   gudang_id: number;
   tgl_masuk: string;
-  tipe_sumber: TipeSumberIn;
+  source_type: TipeSumberIn | null; 
+  is_deleted: boolean;
+  sync_status: string;
+  updated_at: string;
   salesKanvasPlan?: any;
   detailProdukIns?: any[];
 };

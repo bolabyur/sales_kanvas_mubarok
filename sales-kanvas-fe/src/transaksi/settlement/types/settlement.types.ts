@@ -1,10 +1,7 @@
 export type SettlementPayload = {
   sales_kanvas_plan_id: number;
-  total_penjualan_tunai: number;
-  total_piutang_baru: number;
-  total_kasbon_realisasi: number;
   uang_fisik_diterima: number;
-  status: string;
+  approved_by: number; // <-- WAJIB: ID Karyawan (Employee ID)
 };
 
 export type Settlement = {
@@ -16,4 +13,4 @@ export type Settlement = {
   selisih_kas: string;
   status: string;
   salesKanvasPlan?: any;
-};
+}
