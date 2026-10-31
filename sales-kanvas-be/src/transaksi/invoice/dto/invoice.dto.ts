@@ -1,19 +1,18 @@
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
-export const createInvoiceSchema = z.object({
-  outlet_id: z.number().int(),
-  sales_kanvas_plan_id: z.number().int(),
-  tipe_pembayaran: z.enum(['Tunai', 'Kredit']),
-  tgl_invoice: z.string().datetime(),
-  details: z.array(
-    z.object({
-      produk_id: z.number().int(),
-      batch_id: z.number().int(),
-      qty: z.number().int().min(1, 'Minimal 1 barang'),
-      harga_satuan: z.number().min(0),
-    })
-  ).min(1, 'Minimal harus ada 1 barang yang dibeli'),
+const InvoiceDetailSchema = z.object({
+  produk_id: z.number().int().positive(),
+  // batch_id dihapus — BE akan alokasi FEFO otomatis
+  qty: z.number().int().positive(),
 });
 
-export class CreateInvoiceDto extends createZodDto(createInvoiceSchema) {}
+const CreateInvoiceSchema = z.object({
+  outlet_id: z.number().int().positive(),
+  sales_kanvas_plan_id: z.number().int().positive(),
+  tipe_pembayaran: z.enum(['Tunai', 'Kredit']),
+  tgl_invoice: z.string().datetime(),
+  details: z.array(InvoiceDetailSchema).min(1),
+});
+
+export class CreateInvoiceDto extends createZodDto(CreateInvoiceSchema) {}

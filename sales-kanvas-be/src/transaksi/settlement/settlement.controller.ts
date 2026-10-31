@@ -1,10 +1,22 @@
-import { Controller, Get, Post, Body, UseGuards } from '@nestjs/common';
+import { 
+  Controller, 
+  Get, 
+  Post, 
+  Body, 
+  Query, 
+  UseGuards,
+  ParseIntPipe
+} from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { SettlementService } from './settlement.service';
 import { CreateSettlementDto } from './dto/settlement.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permission.guard';
 import { RequirePermission } from '../../common/decorators/require-permission.decorator';
+import { ResponseMessage } from '../../common/decorators/response-message.decorator';
+// ✅ TAMBAHKAN IMPORT INI:
+import { CurrentUser } from '../../auth/decorators/current-user.decorator';
+import { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
 
 @ApiTags('Transaksi - Settlement')
 @ApiBearerAuth('access-token')
@@ -15,13 +27,27 @@ export class SettlementController {
 
   @Post()
   @RequirePermission('settlement:write')
-  create(@Body() dto: CreateSettlementDto) {
-    return this.settlementService.create(dto);
+  @ResponseMessage('Settlement berhasil dibuat')
+  create(
+    @Body() dto: CreateSettlementDto, 
+    @CurrentUser() user: AuthenticatedUser // ✅ Pastikan ini ada
+  ) {
+    // ✅ Kirim user.id ke service (tanpa karakter '\' di akhir)
+    return this.settlementService.create(dto, user.id); 
   }
 
   @Get()
   @RequirePermission('settlement:read')
-  findAll() {
-    return this.settlementService.findAll();
+  @ResponseMessage('List Settlement')
+  findAll(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('search') search?: string,
+  ) {
+    return this.settlementService.findAll(
+      page ? Number(page) : 1,
+      limit ? Number(limit) : 10,
+      search,
+    );
   }
 }

@@ -15,19 +15,21 @@ export const createPlanSchema = z.object({
   tgl_kembali_kanvas: z.string().datetime().nullable().optional(),
   market_area_id: z.number().int(),
   vehicle_id: z.number().int(),
-  note: z.string().optional(),
+  note: z.string().max(255, 'Catatan maksimal 255 karakter').optional().nullable(),
   salesKanvasPersonil: z.array(
     z.object({
       employee_id: z.number().int(),
       position: z.string(),
     })
   ).min(1),
+  
   salesKanvasPlanDetail: z.array(
     z.object({
       product_id: z.number().int(),
       qty: z.number().int().min(1),
     })
-  ).min(1),
+  ).optional().default([]), 
+  
   salesKanvasKasbonMaterial: z.array(
     z.object({
       kasbon_material_type_id: z.number().int(),

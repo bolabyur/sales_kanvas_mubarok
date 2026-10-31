@@ -1,24 +1,22 @@
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
-export const createKasbonProdukSchema = z.object({
-  sales_kanvas_plan_id: z.number().int().positive(),
-  
-  details: z.array(
-    z.object({
-      produk_id: z.number().int().positive(),
-      batch_id: z.number().int().positive(),
-      qty_bawa: z.number().int().min(1),
-    })
-  ).min(1, 'Minimal 1 barang harus diajukan'),
-
-  operasional: z.array(
-    z.object({
-      nama_pengeluaran: z.string().min(1),
-      nominal: z.number().min(0),
-      foto_bukti: z.string().min(1), 
-    })
-  ).optional(),
+const DetailKasbonSchema = z.object({
+  produk_id: z.number().int().positive(),
+  qty_bawa: z.number().int().positive(),
 });
 
-export class CreateKasbonProdukDto extends createZodDto(createKasbonProdukSchema) {}
+const OperasionalSchema = z.object({
+  nama_pengeluaran: z.string().min(1),
+  nominal: z.number().positive(),
+  foto_bukti: z.string().optional().default('default.jpg'),
+});
+
+const CreateKasbonProdukSchema = z.object({
+  sales_kanvas_plan_id: z.number().int().positive(),
+  details: z.array(DetailKasbonSchema).min(1, 'Minimal harus ada 1 barang yang diminta'),
+  
+  operasional: z.array(OperasionalSchema).optional().default([]), 
+});
+
+export class CreateKasbonProdukDto extends createZodDto(CreateKasbonProdukSchema) {}
