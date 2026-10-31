@@ -13,72 +13,90 @@ const pool = new pg.Pool({
 const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
 
 const ALL_PERMISSIONS = [
-  "plan:read", "plan:create", "plan:update", "plan:delete", "plan:approve", "plan:cancel",
-  "market-area:read", "market-area:create", "market-area:update", "market-area:delete",
-  "vehicle:read", "vehicle:create", "vehicle:update", "vehicle:delete",
-  "product:read", "product:create", "product:update", "product:delete",
-  "employee:read", "employee:create", "employee:update", "employee:delete",
-  "outlet:read", "outlet:create", "outlet:update", "outlet:delete",
-  "tipe-harga:read", "tipe-harga:create", "tipe-harga:update", "tipe-harga:delete",
-  "batch:read", "batch:create", "batch:update", "batch:delete",
-  "gudang:read", "gudang:create", "gudang:update", "gudang:delete",
-  "invoice:read", "invoice:create", "invoice:update", "invoice:delete",
-  "kasbon-produk:read", "kasbon-produk:create", "kasbon-produk:update", "kasbon-produk:delete",
-  "produk-out:read", "produk-out:create", "produk-out:update", "produk-out:delete",
-  "kasbon-operasional:read", "kasbon-operasional:create", "kasbon-operasional:update", "kasbon-operasional:delete",
-  "produk-in:read", "produk-in:create", "produk-in:update", "produk-in:delete",
-  "settlement:read", "settlement:create", "settlement:update", "settlement:delete",
-  "retur:read", "retur:create", "retur:update", "retur:delete",
-  "pembayaran:read", "pembayaran:create", "pembayaran:write", "pembayaran:update", "pembayaran:delete",
-  "user:read", "user:create", "user:update", "user:delete",
-  "role:read", "role:create", "role:update", "role:delete",
-  "permission:read"
+  "plan:read", "plan:create", "plan:update", "plan:delete", "plan:approve", "plan:cancel", "plan:write",
+  
+  "product:read", "product:create", "product:update", "product:delete", "product:write",
+  "batch:read", "batch:create", "batch:update", "batch:delete", "batch:write",
+  "gudang:read", "gudang:create", "gudang:update", "gudang:delete", "gudang:write",
+  "outlet:read", "outlet:create", "outlet:update", "outlet:delete", "outlet:write",
+  "employee:read", "employee:create", "employee:update", "employee:delete", "employee:write",
+  "vehicle:read", "vehicle:create", "vehicle:update", "vehicle:delete", "vehicle:write",
+  "market-area:read", "market-area:create", "market-area:update", "market-area:delete", "market-area:write",
+  "tipe-harga:read", "tipe-harga:create", "tipe-harga:update", "tipe-harga:delete", "tipe-harga:write",
+  "user:read", "user:create", "user:update", "user:delete", "user:write",
+  "role:read", "role:create", "role:update", "role:delete", "role:write",
+  "permission:read",
+
+  "kasbon-produk:read", "kasbon-produk:create", "kasbon-produk:update", "kasbon-produk:delete", "kasbon-produk:approve", "kasbon-produk:cancel", "kasbon-produk:write",
+  "kasbon-operasional:read", "kasbon-operasional:create", "kasbon-operasional:update", "kasbon-operasional:delete", "kasbon-operasional:approve", "kasbon-operasional:write",
+
+  "produk-out:read", "produk-out:create", "produk-out:update", "produk-out:delete", "produk-out:write", "produk-out:cancel",
+  "produk-in:read", "produk-in:create", "produk-in:update", "produk-in:delete", "produk-in:write",
+
+  "invoice:read", "invoice:create", "invoice:update", "invoice:delete", "invoice:write",
+  "pembayaran:read", "pembayaran:create", "pembayaran:update", "pembayaran:delete", "pembayaran:write",
+  "settlement:read", "settlement:create", "settlement:update", "settlement:delete", "settlement:write",
+  "retur:read", "retur:create", "retur:update", "retur:delete", "retur:write", "retur:approve",
+  "kanvas-return:read", "kanvas-return:create", "kanvas-return:update", "kanvas-return:delete", "kanvas-return:write",
+  "produk-destruction:read", "produk-destruction:create", "produk-destruction:update", "produk-destruction:delete", "produk-destruction:write",
+
+  "summary:read", "summary:export"
 ];
 
 const ROLE_MAPPING: Record<string, string[]> = {
   "Super Admin": ALL_PERMISSIONS,
   
   "Supervisor Pemasaran": [
-    "plan:read", "plan:approve", "plan:cancel",
-    "kasbon-produk:read", "kasbon-produk:update",
-    "invoice:read"
+    "plan:read", "plan:approve", "plan:cancel", "plan:write",
+    "kasbon-produk:read", "kasbon-produk:approve", "kasbon-produk:update", 
+    "invoice:read", "summary:read",
+    "retur:read", "retur:approve"
   ],
 
   "Tim Sales Kanvas": [
-    "plan:read", "plan:create",
-    "product:read", "outlet:read", "batch:read", "market-area:read", "vehicle:read",
-    "invoice:read", "invoice:create", 
-    "pembayaran:read", "pembayaran:create",
-    "retur:read", "retur:create",
-    "kasbon-operasional:read", "kasbon-operasional:create",
-    "kasbon-produk:read", "kasbon-produk:create"
+    "plan:read", "plan:create", "plan:write",
+    "product:read", "outlet:read", "batch:read", "market-area:read", "vehicle:read", "gudang:read",
+    "invoice:read", "invoice:create", "invoice:write",
+    "pembayaran:read", "pembayaran:create", "pembayaran:write",
+    "retur:read", "retur:create", "retur:write", 
+    "kasbon-operasional:read", "kasbon-operasional:create", "kasbon-operasional:write",
+    "kasbon-produk:read", "kasbon-produk:create", "kasbon-produk:write",
+    "settlement:read", "settlement:create", "settlement:write"
   ],
 
   "Admin Gudang Distribusi": [
-    "kasbon-produk:read", "kasbon-produk:update", 
-    "produk-out:read", "produk-out:create",
-    "produk-in:read", "produk-in:create", 
-    "batch:read", "batch:update",
+    "kasbon-produk:read", "kasbon-produk:update", "kasbon-produk:approve",
+    "produk-out:read", "produk-out:create", "produk-out:update", "produk-out:cancel",
+    "produk-in:read", "produk-in:create", "produk-in:write", 
+    "batch:read", "batch:update", "batch:write",
     "gudang:read",
-    "retur:read", "retur:create", "retur:write" 
+    "retur:read", "retur:create", "retur:write"
   ],
 
   "Admin Gudang Retur": [
-    "retur:read", "retur:update", 
+    "retur:read", "retur:update", "retur:write",
+    "kanvas-return:read", "kanvas-return:create", "kanvas-return:update", "kanvas-return:write",
+    "produk-destruction:read", "produk-destruction:create", "produk-destruction:write",
     "gudang:read"
   ],
 
   "Kasir / Tim Keuangan": [
-    "settlement:read", "settlement:create", "settlement:update",
+    "settlement:read", "settlement:create", "settlement:update", "settlement:write",
     "pembayaran:read", "pembayaran:create", "pembayaran:write", 
     "invoice:read", 
-    "kasbon-operasional:read", "kasbon-operasional:update",
-    "plan:read"
+    "kasbon-operasional:read", "kasbon-operasional:update", "kasbon-operasional:approve", "kasbon-operasional:write",
+    "plan:read", "summary:read", "summary:export"
   ]
 };
 
 async function main() {
   console.log("Memulai proses seeding...");
+
+  console.log("Membersihkan permission usang...");
+  const deletedPerms = await prisma.permission.deleteMany({
+    where: { name: { notIn: ALL_PERMISSIONS } }
+  });
+  console.log(`🧹 ${deletedPerms.count} permission usang dihapus.`);
 
   for (const name of ALL_PERMISSIONS) {
     await prisma.permission.upsert({ where: { name }, update: {}, create: { name } });
@@ -123,7 +141,6 @@ async function main() {
 
   const roles = await prisma.role.findMany();
   const getRoleId = (name: string) => roles.find(r => r.name === name)!.id;
-
   const passwordHash = await bcrypt.hash("password", 10);
 
   await prisma.user.upsert({
@@ -131,25 +148,21 @@ async function main() {
     update: { karyawan_id: employee.id },
     create: { username: "superadmin", password: passwordHash, name: "Super Administrator", role_id: getRoleId("Super Admin"), karyawan_id: employee.id },
   });
-
   await prisma.user.upsert({
     where: { username: "sales" },
     update: { karyawan_id: employee.id },
     create: { username: "sales", password: passwordHash, name: "Sales Satu", role_id: getRoleId("Tim Sales Kanvas"), karyawan_id: employee.id },
   });
-
   await prisma.user.upsert({
     where: { username: "sales2" },
     update: { karyawan_id: employee.id },
     create: { username: "sales2", password: passwordHash, name: "Sales Dua", role_id: getRoleId("Tim Sales Kanvas"), karyawan_id: employee.id },
   });
-
   await prisma.user.upsert({
     where: { username: "gudang" },
     update: { karyawan_id: employee.id },
     create: { username: "gudang", password: passwordHash, name: "Admin Gudang", role_id: getRoleId("Admin Gudang Distribusi"), karyawan_id: employee.id },
   });
-
   await prisma.user.upsert({
     where: { username: "kasir" },
     update: { karyawan_id: employee.id },

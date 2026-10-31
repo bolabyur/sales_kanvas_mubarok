@@ -2,7 +2,9 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { cleanupOpenApiDoc } from 'nestjs-zod';
-import { AllExceptionsFilter } from './common/filters/all-exceptions.filter'; // <-- 1. IMPORT FILTER
+import helmet from 'helmet';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+import { json, urlencoded } from 'express';
 
 process.on('warning', (warning) => {
   if (warning.name === 'DeprecationWarning' && warning.message.includes('client.query()')) {
@@ -14,14 +16,39 @@ process.on('warning', (warning) => {
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   
+  app.use(helmet());
+
+  // === PERBAIKAN API-17: Tolak Duplikasi Authorization Header ===
+  // Posisikan paling atas sebelum body parser agar langsung ditolak
+  app.use((req: any, res: any, next: any) => {
+    const auth = req.headers['authorization'];
+    // Cek jika ada koma (indikasi duplikasi header seperti: "Bearer token1, Bearer token2")
+    if (auth && typeof auth === 'string' && auth.includes(',')) {
+      return res.status(400).json({
+        success: false,
+        statusCode: 400,
+        message: "Duplikasi Authorization Header terdeteksi.",
+      });
+    }
+    next();
+  });
+  // ==============================================================
+
+  // Batasi ukuran body request (Maks 1MB) - Perbaikan DI-06
+  app.use(json({ limit: '1mb' }));
+  app.use(urlencoded({ extended: true, limit: '1mb' }));
+
+  const allowedOrigins = process.env.FRONTEND_URL 
+    ? process.env.FRONTEND_URL.split(',') 
+    : ['http://localhost:3001'];
+
   app.enableCors({
-    origin: 'http://localhost:3001',
+    origin: allowedOrigins,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true, 
   });
 
   app.setGlobalPrefix('api');
-
   app.useGlobalFilters(new AllExceptionsFilter());
 
   const config = new DocumentBuilder()
@@ -42,10 +69,20 @@ async function bootstrap() {
 
   const document = SwaggerModule.createDocument(app, config);
   
-  SwaggerModule.setup('api/docs', app, cleanupOpenApiDoc(document));
+  if (process.env.NODE_ENV !== 'production') {
+    SwaggerModule.setup('api/docs', app, cleanupOpenApiDoc(document));
+  }
 
-  await app.listen(process.env.PORT || 53103);
-  console.log(`Application is running on: ${await app.getUrl()}/api`);
-  console.log(`Swagger Docs available at: ${await app.getUrl()}/api/docs`);
+  const port = process.env.PORT || 53103;
+  await app.listen(port);
+
+  const serverUrl = await app.getUrl();
+  console.log(`Application is running on: ${serverUrl}/api`);
+  
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`Swagger Docs available at: ${serverUrl}/api/docs`);
+  } else {
+    console.log(`Swagger disabled in production environment.`);
+  }
 }
 bootstrap();

@@ -352,7 +352,7 @@ model Batch {
   uuid         String   @unique @default(uuid())
   produk_id    Int
   no_batch     String
-  expired_date DateTime
+  expired_date DateTime  // WAJIB (non-nullable) — Gudang wajib input ED
   stok_gudang  Int      @default(0)
   is_deleted   Boolean  @default(false)
   sync_status  String   @default("Pending")
@@ -426,7 +426,7 @@ model DetailKasbonOperasional {
 model KasbonProduk {
   id                   Int      @id @default(autoincrement())
   uuid                 String   @unique @default(uuid())
-  sales_kanvas_plan_id Int
+  sales_kanvas_plan_id Int      @unique
   status               String   @default("Pending")
   user_id              Int      @default(1)
   ip                   String   @default("127.0.0.1")
@@ -445,7 +445,7 @@ model DetailKasbonProduk {
   id               Int      @id @default(autoincrement())
   uuid             String   @unique @default(uuid())
   kasbon_produk_id Int
-  batch_id         Int
+  batch_id         Int?     // ⬅️ NULLABLE — karena batch baru ditentukan saat Onloading (FEFO)
   qty_bawa         Int
   produk_id        Int
   is_deleted       Boolean  @default(false)
@@ -453,7 +453,7 @@ model DetailKasbonProduk {
   updated_at       DateTime @updatedAt
 
   kasbonProduk KasbonProduk @relation(fields: [kasbon_produk_id], references: [id])
-  batch        Batch        @relation(fields: [batch_id], references: [id])
+  batch        Batch?       @relation(fields: [batch_id], references: [id])
   produk       Product      @relation(fields: [produk_id], references: [id])
 
   @@map("detail_kasbon_produk")
@@ -549,6 +549,7 @@ model InvoiceReturProduk {
   invoice_outlet_id Int?
   gudang_retur_id   Int
   total_nilai_retur Decimal  @db.Decimal(15, 2)
+  status            String   @default("DRAFT")
   is_deleted        Boolean  @default(false)
   sync_status       String   @default("Pending")
   updated_at        DateTime @updatedAt
@@ -783,4 +784,45 @@ model ProdukDestructionDetail {
   produk            Product           @relation(fields: [produk_id], references: [id])
 
   @@map("produk_destruction_detail")
+}
+
+model IdempotencyRecord {
+  id          Int      @id @default(autoincrement())
+  key         String   @unique
+  response    Json
+  status_code Int      @default(201)
+  created_at  DateTime @default(now())
+
+  @@map("idempotency_record")
+}
+
+model AuditLog {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  action     String   
+  entity     String  
+  entity_id  String   
+  old_values Json?    
+  new_values Json?    
+  created_at DateTime @default(now())
+
+  @@index([entity, entity_id])
+  @@index([created_at])
+  @@map("audit_log")
+}
+
+model Notification {
+  id          Int      @id @default(autoincrement())
+  user_id     Int      // Penerima notifikasi (User ID)
+  actor_id    Int?     // Pelaku aksi (User ID)
+  type        String   // "PLAN_APPROVED", "PLAN_CANCELLED", dll
+  title       String   // Judul notifikasi
+  message     String   // Deskripsi detail
+  entity_type String   // "PLAN", "INVOICE", "BON"
+  entity_id   Int      // ID dokumen terkait
+  is_read     Boolean  @default(false)
+  created_at  DateTime @default(now())
+
+  @@index([user_id, is_read])
+  @@map("notifications")
 }

@@ -1,6 +1,9 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_INTERCEPTOR, APP_GUARD, APP_PIPE } from '@nestjs/core'; 
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { ZodValidationPipe } from 'nestjs-zod'; 
+
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { PlanModule } from './plan/plan.module';
@@ -8,7 +11,6 @@ import { VehicleModule } from './master/vehicle/vehicle.module';
 import { MarketAreaModule } from './master/market-area/market-area.module';
 import { ProductModule } from './master/product/product.module';
 import { EmployeeModule } from './master/employee/employee.module';
-import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { OutletModule } from './master/outlet/outlet.module';
 import { BatchModule } from './master/batch/batch.module';
 import { TipeHargaModule } from './master/tipe-harga/tipe-harga.module';
@@ -29,11 +31,23 @@ import { KanvasReturnModule } from './transaksi/kanvas-return/kanvas-return.modu
 import { ProdukDestructionModule } from './transaksi/produk-destruction/produk-destruction.module';
 import { SummaryModule } from './summary/summary.module';
 
-
+import { ResponseInterceptor } from './common/interceptors/response.interceptor';
+import { IdempotencyInterceptor } from './common/interceptors/idempotency.interceptor'; 
+import { AuditLogModule } from './audit-log/audit-log.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { SearchModule } from './search/search.module';
+import { EventEmitterModule } from '@nestjs/event-emitter'
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    EventEmitterModule.forRoot(), 
+    
+    ThrottlerModule.forRoot([{
+      ttl: 60000, 
+      limit: 10000, 
+    }]),
+
     PrismaModule,
     OutletModule,
     TipeHargaModule,
@@ -60,7 +74,22 @@ import { SummaryModule } from './summary/summary.module';
     KanvasReturnModule,
     ProdukDestructionModule,
     SummaryModule,
+    AuditLogModule,
+    SearchModule,
+    NotificationsModule
   ],
-  providers: [{ provide: APP_INTERCEPTOR, useClass: ResponseInterceptor }],
+  providers: [
+    {
+      provide: APP_PIPE,
+      useClass: ZodValidationPipe,
+    },
+    { provide: APP_INTERCEPTOR, useClass: IdempotencyInterceptor },
+    { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
+    
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}
