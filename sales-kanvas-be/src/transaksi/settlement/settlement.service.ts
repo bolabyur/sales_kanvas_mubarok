@@ -1,17 +1,16 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateSettlementDto } from './dto/settlement.dto';
-import { EventEmitter2 } from '@nestjs/event-emitter'; // ✅
-import { SettlementSubmittedEvent } from './events/settlement-submitted.event'; // ✅
+import { EventEmitter2 } from '@nestjs/event-emitter'; 
+import { SettlementSubmittedEvent } from './events/settlement-submitted.event'; 
 
 @Injectable()
 export class SettlementService {
   constructor(
     private prisma: PrismaService,
-    private eventEmitter: EventEmitter2, // ✅
+    private eventEmitter: EventEmitter2, 
   ) {}
 
-  // ✅ Tambahkan parameter userId (pastikan Controller mengirimkannya)
   async create(data: CreateSettlementDto, userId: number) {
     const result = await this.prisma.$transaction(async (tx) => {
       const plan = await tx.salesKanvasPlan.findUnique({
@@ -71,7 +70,6 @@ export class SettlementService {
       return { settlement, planInvoice: plan.invoice, totalPenjualanTunai };
     });
 
-    // 🚀 TEMBAK EVENT SETELAH TRANSAKSI BERHASIL
     const actor = await this.prisma.user.findUnique({ where: { id: userId } });
     this.eventEmitter.emit(
       "settlement.submitted",

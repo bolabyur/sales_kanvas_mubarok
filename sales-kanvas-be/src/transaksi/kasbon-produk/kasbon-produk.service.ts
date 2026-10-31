@@ -112,7 +112,6 @@ export class KasbonProdukService {
       { isolationLevel: "Serializable" },
     );
 
-    // 🚀 TEMBAK EVENT SETELAH TRANSAKSI BERHASIL
     const actor = await this.prisma.user.findUnique({ where: { id: userId } });
     this.eventEmitter.emit(
       "bon.created",

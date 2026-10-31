@@ -24,8 +24,6 @@ export class ReturController {
   }
 
   @Patch(':id/approve')
-  // ✅ PERBAIKAN: Gunakan permission 'retur:approve' (atau 'retur:write' jika belum ada)
-  // Pastikan role Sales TIDAK memiliki permission ini di database
   @RequirePermission('retur:approve') 
   approve(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
     return this.returService.approve(+id, user);

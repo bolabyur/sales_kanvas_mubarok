@@ -2,15 +2,15 @@ import { Injectable, BadRequestException, NotFoundException } from '@nestjs/comm
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateProdukOutDto } from './dto/produk-out.dto';
 import { AuditLogService } from 'src/audit-log/audit-log.service';
-import { EventEmitter2 } from '@nestjs/event-emitter'; // ✅
-import { LoadingCompletedEvent } from './events/loading-completed.event'; // ✅
+import { EventEmitter2 } from '@nestjs/event-emitter'; 
+import { LoadingCompletedEvent } from './events/loading-completed.event';
 
 @Injectable()
 export class ProdukOutService {
   constructor(
     private prisma: PrismaService,
     private auditLog: AuditLogService,
-    private eventEmitter: EventEmitter2, // ✅
+    private eventEmitter: EventEmitter2, 
   ) {}
 
   private async allocateFefo(tx: any, produk_id: number, qty: number): Promise<Array<{ batch_id: number; qty: number; no_batch: string }>> {
@@ -129,7 +129,6 @@ export class ProdukOutService {
       { isolationLevel: 'Serializable' },
     );
 
-    // 🚀 TEMBAK EVENT SETELAH TRANSAKSI BERHASIL
     const actor = await this.prisma.user.findUnique({ where: { id: userId } });
     this.eventEmitter.emit(
       "loading.completed",

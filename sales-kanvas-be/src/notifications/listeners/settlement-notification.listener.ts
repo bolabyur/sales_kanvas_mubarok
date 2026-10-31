@@ -14,7 +14,6 @@ export class SettlementNotificationListener {
 
   @OnEvent('settlement.submitted')
   async handleSettlementSubmitted(event: SettlementSubmittedEvent) {
-    // Cari semua Kasir
     const kasirs = await this.prisma.user.findMany({
       where: { role: { name: "Kasir / Tim Keuangan" }, is_active: true },
     });

@@ -15,19 +15,16 @@ export class InvoiceNotificationListener {
 
   @OnEvent('invoice.created')
   async handleInvoiceCreated(event: InvoiceCreatedEvent) {
-    // 1. Cari semua user dengan role Kasir / Tim Keuangan
     const kasirs = await this.prisma.user.findMany({
       where: { role: { name: "Kasir / Tim Keuangan" }, is_active: true },
     });
 
-    // 2. Format angka ke Rupiah
     const formattedAmount = new Intl.NumberFormat("id-ID", {
       style: "currency",
       currency: "IDR",
       minimumFractionDigits: 0,
     }).format(event.totalAmount);
 
-    // 3. Kirim notif ke semua kasir
     for (const kasir of kasirs) {
       await this.notifications.createAndSend({
         user_id: kasir.id,

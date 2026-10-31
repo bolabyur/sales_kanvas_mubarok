@@ -15,7 +15,6 @@ export class NotificationsGateway implements OnGatewayConnection {
 
   async handleConnection(client: Socket) {
     try {
-      // Ambil token dari query atau headers (dari Frontend)
       const token = client.handshake.auth?.token || client.handshake.headers?.authorization?.split(' ')[1];
       
       if (!token) {
@@ -24,7 +23,6 @@ export class NotificationsGateway implements OnGatewayConnection {
         return;
       }
 
-      // Verifikasi Token
       const payload = await this.jwtService.verifyAsync(token, {
         secret: process.env.JWT_SECRET,
       });

@@ -14,16 +14,13 @@ export class PlanNotificationListener {
   ) {}
 
   @OnEvent('plan.created')
-  async handlePlanCreated(event: PlanCreatedEvent) {
-    // Cari user dengan role SPV atau Super Admin
-    const recipients = await this.prisma.user.findMany({
+  async handlePlanCreated(event: PlanCreatedEvent) {    const recipients = await this.prisma.user.findMany({
       where: { 
         role: { name: { in: ["Supervisor Pemasaran", "Super Admin"] } }, 
         is_active: true 
       },
     });
 
-    // ✅ PERBAIKAN: Gunakan variabel 'recipients' dan 'recipient'
     for (const recipient of recipients) {
       await this.notifications.createAndSend({
         user_id: recipient.id,

@@ -29,13 +29,11 @@ export class SummaryService {
       _count: { id: true },
     });
 
-    // PERBAIKAN: Hitung Total Kasbon Operasional
     const kasbons = await this.prisma.kasbonOperasional.aggregate({
       where: { updated_at: dateFilter, is_deleted: false },
       _sum: { nominal_kasbon: true },
     });
 
-    // PERBAIKAN: Hitung Total Piutang Baru (Berdasarkan Invoice yang terbit di periode ini)
     const piutangs = await this.prisma.kartuPiutangOutlet.aggregate({
       where: {
         invoiceOutlet: { tgl_invoice: dateFilter, is_deleted: false },

@@ -12,6 +12,6 @@ export const createUserSchema = z.object({
 export class CreateUserDto extends createZodDto(createUserSchema) {}
 
 export const updateUserSchema = createUserSchema.partial().omit({ password: true }).extend({
-  password: z.string().min(6).optional(), // Opsional saat edit
+  password: z.string().min(6).optional(), 
 });
 export class UpdateUserDto extends createZodDto(updateUserSchema) {}

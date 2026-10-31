@@ -3,22 +3,22 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CreatePembayaranDto } from './dto/pembayaran.dto';
 import { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
 import { AuditLogService } from '../../audit-log/audit-log.service';
-import { EventEmitter2 } from '@nestjs/event-emitter'; // ✅
-import { PaymentReceivedEvent } from './events/payment-received.event'; // ✅
+import { EventEmitter2 } from '@nestjs/event-emitter'; 
+import { PaymentReceivedEvent } from './events/payment-received.event'; 
 
 @Injectable()
 export class PembayaranService {
   constructor(
     private prisma: PrismaService,
     private auditLog: AuditLogService, 
-    private eventEmitter: EventEmitter2, // ✅
+    private eventEmitter: EventEmitter2, 
   ) {}
 
   async create(data: CreatePembayaranDto, user: AuthenticatedUser) {
     const result = await this.prisma.$transaction(async (tx) => {
       const invoice = await tx.invoiceOutlet.findUnique({
         where: { id: data.invoice_outlet_id },
-        include: { outlet: true, salesKanvasPlan: true }, // ✅ Tambah include outlet
+        include: { outlet: true, salesKanvasPlan: true },
       });
 
       if (!invoice) throw new NotFoundException('Invoice tidak ditemukan');
@@ -94,7 +94,7 @@ export class PembayaranService {
       };
     }, { isolationLevel: 'Serializable' });
 
-    // 🚀 TEMBAK EVENT SETELAH TRANSAKSI BERHASIL
+    
     if (result.salesUserId) {
       const actor = await this.prisma.user.findUnique({ where: { id: user.id } });
       this.eventEmitter.emit(

@@ -16,7 +16,7 @@ import {
 import { AuditLogService } from "../audit-log/audit-log.service";
 import { EventEmitter2 } from "@nestjs/event-emitter";
 import { PlanApprovedEvent } from "./events/plan-approved.event";
-import { PlanCreatedEvent } from "./events/plan-created.event"; // ✅
+import { PlanCreatedEvent } from "./events/plan-created.event";
 import { AuthenticatedUser } from "src/common/interfaces/authenticated-user.interface";
 
 @Injectable()
@@ -75,7 +75,6 @@ export class PlanService {
       new_values: { invoice: plan.invoice, status: plan.status },
     });
 
-    // 🚀 TEMBAK EVENT PLAN CREATED
     const actor = await this.prisma.user.findUnique({ where: { id: userId } });
     this.eventEmitter.emit(
       "plan.created",

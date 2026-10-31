@@ -12,7 +12,7 @@ export class SummaryController {
 
   @Get('sale')
   @RequirePermission('summary:read')
-  @Throttle({ default: { limit: 10, ttl: 60000 } }) // <-- Maks 10 req/menit
+  @Throttle({ default: { limit: 10, ttl: 60000 } }) 
   getSummarySale(
     @Query('startDate') startDate: string,
     @Query('endDate') endDate: string,

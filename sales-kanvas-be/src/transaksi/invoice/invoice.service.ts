@@ -7,20 +7,19 @@ import { PrismaService } from "../../prisma/prisma.service";
 import { CreateInvoiceDto } from "./dto/invoice.dto";
 import { AuthenticatedUser } from "../../common/interfaces/authenticated-user.interface";
 import { AuditLogService } from "../../audit-log/audit-log.service";
-import { EventEmitter2 } from "@nestjs/event-emitter"; // ✅ Import EventEmitter
-import { InvoiceCreatedEvent } from "./events/invoice-created.event"; // ✅ Import Event
-import { InvoiceCancelledEvent } from "./events/invoice-cancelled.event"; // ✅ Import Event
+import { EventEmitter2 } from "@nestjs/event-emitter";
+import { InvoiceCreatedEvent } from "./events/invoice-created.event"; 
+import { InvoiceCancelledEvent } from "./events/invoice-cancelled.event"; 
 
 @Injectable()
 export class InvoiceService {
   constructor(
     private prisma: PrismaService,
     private auditLog: AuditLogService,
-    private eventEmitter: EventEmitter2, // ✅ Tambah EventEmitter
+    private eventEmitter: EventEmitter2, 
   ) {}
 
   async create(data: CreateInvoiceDto, user: AuthenticatedUser) {
-    // 💡 Simpan transaksi dalam variabel agar bisa diakses setelah commit
     const invoice = await this.prisma.$transaction(
       async (tx) => {
         const outlet = await tx.outlet.findUnique({
@@ -200,13 +199,11 @@ export class InvoiceService {
           tx,
         );
 
-        // Kembalikan data invoice dan nama outlet untuk digunakan di notifikasi
         return { invoice: newInvoice, outletName: outlet.nama_toko };
       },
       { isolationLevel: "Serializable" },
     );
 
-    // 🚀 TRANSAKSI DB BERHASIL! Tembak Event Notifikasi di sini (di luar $transaction)
     const actor = await this.prisma.user.findUnique({ where: { id: user.id } });
     
     this.eventEmitter.emit(

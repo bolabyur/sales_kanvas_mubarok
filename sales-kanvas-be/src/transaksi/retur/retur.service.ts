@@ -2,7 +2,7 @@ import {
   Injectable,
   BadRequestException,
   NotFoundException,
-  ForbiddenException, // ✅ TAMBAHKAN INI
+  ForbiddenException, 
 } from "@nestjs/common";
 import { PrismaService } from "../../prisma/prisma.service";
 import { CreateReturDto } from "./dto/retur.dto";
@@ -111,7 +111,6 @@ export class ReturService {
       { isolationLevel: "Serializable" },
     );
 
-    // 🚀 TEMBAK EVENT RETURN SUBMITTED
     if (result.salesUserId) {
       const actor = await this.prisma.user.findUnique({
         where: { id: user.id },

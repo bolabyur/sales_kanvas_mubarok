@@ -3,7 +3,6 @@ import { z } from 'zod';
 
 const InvoiceDetailSchema = z.object({
   produk_id: z.number().int().positive(),
-  // batch_id dihapus — BE akan alokasi FEFO otomatis
   qty: z.number().int().positive(),
 });
 

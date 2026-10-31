@@ -46,7 +46,7 @@ export class PlanController {
   @ResponseMessage("List Plan")
   findAll(
     @Query() query: FindAllPlanDto, 
-    @CurrentUser() user: AuthenticatedUser // ✅ Gunakan @CurrentUser
+    @CurrentUser() user: AuthenticatedUser 
   ) {
     return this.planService.findAll(query, user);
   }

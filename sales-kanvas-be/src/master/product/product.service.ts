@@ -14,7 +14,7 @@ export class ProductService {
     return this.prisma.product.findMany({
       where: { is_active: true },
       include: {
-        produkHargas: true, // WAJIB: Agar harga muncul saat form Edit dibuka
+        produkHargas: true, 
       },
       orderBy: { name: 'asc' },
     });
@@ -30,7 +30,6 @@ export class ProductService {
   }
 
   async create(dto: CreateProductDto, userId: number, ip: string) {
-    // Pisahkan prices dari data produk lainnya
     const { prices, ...productData } = dto as any; 
 
     const product = await this.prisma.product.create({
@@ -38,7 +37,6 @@ export class ProductService {
         ...productData, 
         user_id: userId, 
         ip,
-        // Buat data harganya sekaligus
         produkHargas: prices && prices.length > 0 ? {
           create: prices.map((p: any) => ({
             tipe_harga_id: p.tipe_harga_id,
@@ -64,14 +62,12 @@ export class ProductService {
     const { prices, ...productData } = dto as any;
     const oldProduct = await this.prisma.product.findUniqueOrThrow({ where: { id } });
 
-    // Gunakan transaksi agar produk dan harga ter-update bersamaan
     return this.prisma.$transaction(async (tx) => {
       const updatedProduct = await tx.product.update({
         where: { id },
         data: { ...productData, user_id: userId, ip, updated_at: new Date() },
       });
 
-      // Update atau buat baru untuk setiap harga
       if (prices && prices.length > 0) {
         for (const p of prices) {
           await tx.produkHarga.upsert({

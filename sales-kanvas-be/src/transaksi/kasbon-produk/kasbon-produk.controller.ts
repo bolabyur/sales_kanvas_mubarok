@@ -48,7 +48,7 @@ export class KasbonProdukController {
     @Param("id", ParseIntPipe) id: number,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.kasbonProdukService.findOne(id, user); // <-- Kirim user
+    return this.kasbonProdukService.findOne(id, user); 
   }
 
   @Patch(":id/update-status")

@@ -14,11 +14,9 @@ const baseProductSchema = z.object({
   isian: z.number().int().nullable().optional(),
   weight: z.number().int().nullable().optional(),
   expired_count: z.number().int().nullable().optional(),
-  // PERBAIKAN: Tambahkan 'Retail' agar sesuai dengan data di database Anda
   type_price: z.enum(['FIXED', 'PERSENTASE', 'Retail']), 
   hpp: z.number().nullable().optional(),
   is_active: z.boolean().optional(),
-  // PERBAIKAN: Terima array prices dari frontend
   prices: z.array(z.object({
     tipe_harga_id: z.number().int(),
     harga: z.number()

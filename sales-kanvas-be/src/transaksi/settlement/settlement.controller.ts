@@ -14,7 +14,6 @@ import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permission.guard';
 import { RequirePermission } from '../../common/decorators/require-permission.decorator';
 import { ResponseMessage } from '../../common/decorators/response-message.decorator';
-// ✅ TAMBAHKAN IMPORT INI:
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
 
@@ -30,9 +29,8 @@ export class SettlementController {
   @ResponseMessage('Settlement berhasil dibuat')
   create(
     @Body() dto: CreateSettlementDto, 
-    @CurrentUser() user: AuthenticatedUser // ✅ Pastikan ini ada
+    @CurrentUser() user: AuthenticatedUser 
   ) {
-    // ✅ Kirim user.id ke service (tanpa karakter '\' di akhir)
     return this.settlementService.create(dto, user.id); 
   }
 
