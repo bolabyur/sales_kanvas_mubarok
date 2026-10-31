@@ -25,9 +25,12 @@ export class KasbonOperasionalController {
   constructor(private readonly kasbonOperasionalService: KasbonOperasionalService) {}
 
   @Post()
-  @RequirePermission('kasbon-operasional:write')
-  create(@Body() dto: CreateKasbonOperasionalDto) {
-    return this.kasbonOperasionalService.create(dto);
+  @RequirePermission('kasbon-operasional:create')
+  create(
+    @Body() dto: CreateKasbonOperasionalDto,
+    @CurrentUser() user: AuthenticatedUser, 
+  ) {
+    return this.kasbonOperasionalService.create(dto, user.id, '127.0.0.1'); 
   }
 
   @Get()
@@ -37,7 +40,7 @@ export class KasbonOperasionalController {
   }
 
   @Patch(':id/update-status')
-  @RequirePermission('kasbon-operasional:update') 
+  @RequirePermission('kasbon-operasional:update')
   updateStatus(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: { status: string },

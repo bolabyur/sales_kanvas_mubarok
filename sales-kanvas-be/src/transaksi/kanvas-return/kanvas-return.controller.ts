@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, UseInterceptors } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { KanvasReturnService } from './kanvas-return.service';
 import { CreateKanvasReturnDto } from './dto/kanvas-return.dto';
@@ -7,6 +7,7 @@ import { PermissionsGuard } from '../../common/guards/permission.guard';
 import { RequirePermission } from '../../common/decorators/require-permission.decorator';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
+import { IdempotencyInterceptor } from 'src/common/interceptors/idempotency.interceptor';
 
 @ApiTags('Transaksi - Retur Kanvas')
 @ApiBearerAuth('access-token')
@@ -17,6 +18,7 @@ export class KanvasReturnController {
 
   @Post()
   @RequirePermission('retur:create')
+  @UseInterceptors(IdempotencyInterceptor)
   create(@Body() dto: CreateKanvasReturnDto, @CurrentUser() user: AuthenticatedUser) {
     return this.service.create(dto, user.id, '127.0.0.1');
   }

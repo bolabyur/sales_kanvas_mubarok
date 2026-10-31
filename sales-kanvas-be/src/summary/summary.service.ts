@@ -29,8 +29,25 @@ export class SummaryService {
       _count: { id: true },
     });
 
+    // PERBAIKAN: Hitung Total Kasbon Operasional
+    const kasbons = await this.prisma.kasbonOperasional.aggregate({
+      where: { updated_at: dateFilter, is_deleted: false },
+      _sum: { nominal_kasbon: true },
+    });
+
+    // PERBAIKAN: Hitung Total Piutang Baru (Berdasarkan Invoice yang terbit di periode ini)
+    const piutangs = await this.prisma.kartuPiutangOutlet.aggregate({
+      where: {
+        invoiceOutlet: { tgl_invoice: dateFilter, is_deleted: false },
+        is_deleted: false,
+      },
+      _sum: { sisa_piutang: true },
+    });
+
     const totalBruto = invoices._sum.total_tagihan?.toNumber() || 0;
     const totalRetur = returns._sum.total_nilai_retur?.toNumber() || 0;
+    const totalKasbon = kasbons._sum.nominal_kasbon?.toNumber() || 0;
+    const totalPiutang = piutangs._sum.sisa_piutang?.toNumber() || 0;
 
     return {
       periode: { start, end },
@@ -38,12 +55,15 @@ export class SummaryService {
       penjualan_bruto: totalBruto,
       total_retur: totalRetur,
       penjualan_neto: totalBruto - totalRetur,
+      total_kasbon: totalKasbon,
+      total_piutang: totalPiutang,
       rincian_pembayaran: salesByType.map((item) => ({
         tipe: item.tipe_pembayaran,
         total: item._sum.total_tagihan?.toNumber() || 0,
       })),
     };
   }
+
 
   async getSummarySaleZona(startDate?: string, endDate?: string) {
     const now = new Date();
