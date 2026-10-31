@@ -41,67 +41,73 @@ export default function App() {
       <Route element={<RequireAuth />}>
         <Route element={<AdminLayout />}>
           <Route index element={<DashboardPage />} />
+          
           {/* MASTER DATA ROUTES */}
           <Route path="/master/product" element={<ProductPage />} />
           <Route path="/master/tipe-harga" element={<TipeHargaPage />} />
           <Route path="/master/outlet" element={<OutletPage />} />
-          <Route
-            path="/master/gudang-utama"
-            element={
-              <GudangPage tipeGudang="Barang Jadi" title="Gudang Utama" />
-            }
-          />
-          <Route
-            path="/master/gudang-retur"
-            element={<GudangPage tipeGudang="Retur" title="Gudang Retur" />}
-          />{" "}
+          <Route path="/master/gudang-utama" element={<GudangPage tipeGudang="Barang Jadi" title="Gudang Utama" />} />
+          <Route path="/master/gudang-retur" element={<GudangPage tipeGudang="Retur" title="Gudang Retur" />} />
           <Route path="/master/batch" element={<BatchPage />} />
           <Route path="/master/employee" element={<EmployeePage />} />
           <Route path="/master/vehicle" element={<VehiclePage />} />
           <Route path="/master/market-area" element={<MarketAreaPage />} />
+          
           {/* USER MANAGEMENT ROUTES */}
           <Route path="/master/user" element={<UserPage />} />
           <Route path="/master/role" element={<RolePage />} />
           <Route path="/master/permission" element={<PermissionPage />} />
+          
           {/* PERENCANAAN ROUTES */}
           <Route element={<RequirePermission permission="plan:read" />}>
             <Route path="/plan" element={<PlanPage />} />
             <Route path="/plan/:id" element={<PlanDetailPage />} />
           </Route>
+          
           {/* TRANSAKSI ROUTES */}
-          <Route
-            path="/transaksi/kasbon-produk"
-            element={<KasbonProdukPage />}
-          />
-          <Route path="/transaksi/produk-out" element={<ProdukOutPage />} />
-          <Route path="/transaksi/produk-in" element={<ProdukInPage />} />
-          <Route
-            path="/transaksi/kanvas-return"
-            element={<KanvasReturnPage />}
-          />
-          <Route
-            path="/transaksi/disposal-barang"
-            element={<ProdukDestructionPage />}
-          />
-          <Route path="/transaksi/settlement" element={<SettlementPage />} />
-          <Route path="/transaksi/pembayaran" element={<PembayaranPage />} />
-          <Route
-            path="/transaksi/kasbon-operasional"
-            element={<KasbonOperasionalPage />}
-          />
-          {/* ROUTE INVOICE YANG BARU DITAMBAHKAN */}
-          <Route path="/transaksi/invoice" element={<InvoicePage />} />
-          <Route path="/transaksi/retur" element={<ReturPage />} />
-          <Route path="/report/summary" element={<SummaryPage />} />
-          <Route
-            path="*"
-            element={
+          <Route element={<RequirePermission permission="kasbon-produk:read" />}>
+            <Route path="/transaksi/kasbon-produk" element={<KasbonProdukPage />} />
+          </Route>
+          
+          <Route element={<RequirePermission permission="produk-out:read" />}>
+            <Route path="/transaksi/produk-out" element={<ProdukOutPage />} />
+          </Route>
+
+          <Route element={<RequirePermission permission="produk-in:read" />}>
+            <Route path="/transaksi/produk-in" element={<ProdukInPage />} />
+          </Route>
+
+          <Route element={<RequirePermission permission="retur:read" />}>
+            <Route path="/transaksi/kanvas-return" element={<KanvasReturnPage />} />
+            <Route path="/transaksi/disposal-barang" element={<ProdukDestructionPage />} />
+            <Route path="/transaksi/retur" element={<ReturPage />} />
+          </Route>
+
+          <Route element={<RequirePermission permission="settlement:read" />}>
+            <Route path="/transaksi/settlement" element={<SettlementPage />} />
+          </Route>
+
+          <Route element={<RequirePermission permission="pembayaran:read" />}>
+            <Route path="/transaksi/pembayaran" element={<PembayaranPage />} />
+          </Route>
+
+          <Route element={<RequirePermission permission="invoice:read" />}>
+            <Route path="/transaksi/invoice" element={<InvoicePage />} />
+          </Route>
+
+          <Route element={<RequirePermission permission="kasbon-operasional:read" />}>
+            <Route path="/transaksi/kasbon-operasional" element={<KasbonOperasionalPage />} />
+          </Route>
+
+          <Route element={<RequirePermission permission="invoice:read" />}>
+            <Route path="/report/summary" element={<SummaryPage />} />
+          </Route>
+          
+          <Route path="*" element={
               <div className="flex h-full items-center justify-center p-6">
-                <p className="text-lg font-semibold text-muted-foreground">
-                  404 - Halaman tidak ditemukan.
-                </p>
+                <p className="text-lg font-semibold text-muted-foreground">404 - Halaman tidak ditemukan.</p>
               </div>
-            }
+            } 
           />
         </Route>
       </Route>

@@ -47,6 +47,11 @@ function send(path: string, init: RequestInit, access: string | null) {
   if (init.body && !(init.body instanceof FormData)) {
     headers.set("Content-Type", "application/json");
   }
+  
+  if (init.method?.toUpperCase() === "POST" && !headers.has("x-idempotency-key")) {
+    headers.set("x-idempotency-key", crypto.randomUUID());
+  }
+
   if (access) headers.set("Authorization", `Bearer ${access}`);
   return fetch(`${BASE_URL}${path}`, { ...init, headers });
 }

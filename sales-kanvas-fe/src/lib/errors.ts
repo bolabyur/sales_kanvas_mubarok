@@ -1,23 +1,37 @@
-import { ApiError } from "./api";
+// HAPUS BARIS IMPORT ApiError DI SINI KARENA TIDAK DIPAKAI
 
-const MESSAGES: Record<string, string> = {
-  "Invalid credentials": "Username atau password salah",
-  "Account is not active": "Akun Anda tidak aktif",
-  "Invalid or expired refresh token": "Sesi berakhir, silakan login kembali",
-  "Refresh token reuse detected": "Sesi berakhir, silakan login kembali",
-  "User not found": "Akun tidak ditemukan",
-  "Validation failed": "Periksa kembali isian form",
-  "Invalid reference": "Data masih dipakai atau referensi tidak valid",
-  "Record not found": "Data tidak ditemukan",
-  "Invalid data provided": "Data yang dikirim tidak valid",
-};
+export function errorMessage(e: any): string {
+  if (!e) return "Terjadi kesalahan yang tidak diketahui";
+  
+  // Ambil pesan error dari berbagai kemungkinan bentuk
+  let msg = e.message || e;
+  if (typeof msg === "object" && msg.message) msg = msg.message;
 
-export function errorMessage(e: unknown): string {
-  if (!(e instanceof ApiError)) return "Tidak dapat terhubung ke server";
-  if (MESSAGES[e.message]) return MESSAGES[e.message];
-  if (e.status === 403) return "Anda tidak punya akses untuk aksi ini";
-  if (e.status === 409)
-    return `Data sudah ada (${e.message.replace(" already exists", "")})`;
-  if (e.status >= 500) return "Terjadi kesalahan di server, coba lagi nanti";
-  return e.message;
+  // Jika Array (Zod Error)
+  if (Array.isArray(msg)) {
+    return msg.map((m: any) => m.message || String(m)).join(", ");
+  }
+
+  if (typeof msg === "object") {
+    return JSON.stringify(msg);
+  }
+
+  return String(msg);
+}
+
+export function fieldErrors(e: any): Record<string, string> {
+  const errors: Record<string, string> = {};
+  if (!e) return errors;
+  
+  let msg = e.message || e;
+  if (typeof msg === "object" && msg.message) msg = msg.message;
+
+  if (Array.isArray(msg)) {
+    msg.forEach((m: any) => {
+      if (m && m.field && m.message) {
+        errors[m.field] = Array.isArray(m.message) ? m.message.join(", ") : String(m.message);
+      }
+    });
+  }
+  return errors;
 }

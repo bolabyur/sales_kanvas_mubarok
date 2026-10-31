@@ -1,5 +1,4 @@
 import { Outlet, useLocation } from "react-router-dom";
-import { Separator } from "@/components/ui/separator";
 import {
   SidebarInset,
   SidebarProvider,
@@ -8,6 +7,10 @@ import {
 import { pageTitle } from "@/lib/app";
 import { AppSidebar } from "./app-sidebar";
 import { isActive, NAV } from "./nav";
+import { GlobalSearch } from "@/components/shared/global-search";
+// 👇 TAMBAHKAN BARIS IMPORT INI
+import { NotificationCenter } from "@/components/shared/notification-center"; 
+import { useSocketNotifications } from "@/hooks/useSocketNotifications";
 
 export function AdminLayout() {
   const { pathname } = useLocation();
@@ -15,18 +18,26 @@ export function AdminLayout() {
     isActive(pathname, i.url),
   )?.title;
 
+  // AKTIFKAN LISTENER SOCKET
+  useSocketNotifications();
+
   return (
     <SidebarProvider>
       <title>{pageTitle(title)}</title>
       <AppSidebar />
       <SidebarInset>
-        <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b bg-background px-4">
-          <SidebarTrigger className="-ml-1" />
-          <Separator
-            orientation="vertical"
-            className="mr-2 data-vertical:h-4 data-vertical:self-center"
-          />
-          <h1 className="truncate text-sm font-medium">{title}</h1>
+        <header className="flex h-16 items-center justify-between px-4 border-b bg-background">
+          <div className="flex items-center gap-4">
+            <SidebarTrigger />
+            {/* Perbaikan UI: Judul menyesuaikan halaman yang sedang dibuka */}
+            <h1 className="text-lg font-semibold">{title || "Sales Kanvas"}</h1>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <GlobalSearch />
+            {/* 👇 SEKARANG SUDAH BISA DIPAKAI KARENA SUDAH ADA IMPORT DI ATAS */}
+            <NotificationCenter />
+          </div>
         </header>
         <div className="flex-1 p-4 md:p-6">
           <Outlet />

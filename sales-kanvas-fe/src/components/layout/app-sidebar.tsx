@@ -51,6 +51,7 @@ export function AppSidebar() {
 
       <SidebarContent>
         {NAV.map((group) => {
+          // ✅ Filter item menu berdasarkan permission
           const items = group.items.filter(
             (i) => !i.permission || can(i.permission),
           );
