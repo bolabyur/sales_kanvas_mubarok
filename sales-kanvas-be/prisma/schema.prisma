@@ -352,7 +352,7 @@ model Batch {
   uuid         String   @unique @default(uuid())
   produk_id    Int
   no_batch     String
-  expired_date DateTime  // WAJIB (non-nullable) — Gudang wajib input ED
+  expired_date DateTime  
   stok_gudang  Int      @default(0)
   is_deleted   Boolean  @default(false)
   sync_status  String   @default("Pending")
@@ -445,7 +445,7 @@ model DetailKasbonProduk {
   id               Int      @id @default(autoincrement())
   uuid             String   @unique @default(uuid())
   kasbon_produk_id Int
-  batch_id         Int?     // ⬅️ NULLABLE — karena batch baru ditentukan saat Onloading (FEFO)
+  batch_id         Int?    
   qty_bawa         Int
   produk_id        Int
   is_deleted       Boolean  @default(false)
@@ -813,13 +813,13 @@ model AuditLog {
 
 model Notification {
   id          Int      @id @default(autoincrement())
-  user_id     Int      // Penerima notifikasi (User ID)
-  actor_id    Int?     // Pelaku aksi (User ID)
-  type        String   // "PLAN_APPROVED", "PLAN_CANCELLED", dll
-  title       String   // Judul notifikasi
-  message     String   // Deskripsi detail
-  entity_type String   // "PLAN", "INVOICE", "BON"
-  entity_id   Int      // ID dokumen terkait
+  user_id     Int     
+  actor_id    Int?    
+  type        String   
+  title       String   
+  message     String   
+  entity_type String   
+  entity_id   Int      
   is_read     Boolean  @default(false)
   created_at  DateTime @default(now())
 

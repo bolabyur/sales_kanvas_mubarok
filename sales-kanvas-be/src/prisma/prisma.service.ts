@@ -11,17 +11,15 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   constructor() {
     const connectionString = process.env.DATABASE_URL;
     
-    // KONFIGURASI POOL: Mencegah error query paralel & memory leak
     const pool = new Pool({ 
       connectionString,
-      max: 20,                       // Maksimal 20 koneksi simultan
-      idleTimeoutMillis: 30000,      // Tutup koneksi yang idle setelah 30 detik
-      connectionTimeoutMillis: 5000, // Batas waktu koneksi 5 detik
+      max: 20,                       
+      idleTimeoutMillis: 30000,      
+      connectionTimeoutMillis: 5000, 
     });
 
     const adapter = new PrismaPg(pool);
     
-    // Panggil constructor PrismaClient dengan adapter
     super({ adapter });
 
     this.pool = pool;

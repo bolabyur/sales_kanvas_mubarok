@@ -23,7 +23,6 @@ export class AllExceptionsFilter implements ExceptionFilter {
     let message: any = "Terjadi kesalahan pada server (Internal Server Error)";
     let details: any = null;
 
-    // 1. Tangani Error Validasi dari Zod (DTO)
     if (exception instanceof ZodValidationException) {
       status = HttpStatus.BAD_REQUEST;
       message = "Validasi Gagal";
@@ -35,12 +34,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
       details = errorsArray.map((err: any) => ({
         field: err.path?.join(".") || "unknown",
-        // Bersihkan pesan dari karakter aneh yang mungkin bocor
         message: (err.message || "Nilai tidak valid").replace(/\n/g, " ").replace(/at /g, "di "),
       }));
       if (details.length === 0) details = "Periksa kembali isian form Anda.";
     }
-    // 2. Tangani HTTP Exception biasa (401, 403, 404, dll)
     else if (exception instanceof HttpException) {
       status = exception.getStatus();
       const res = exception.getResponse();
@@ -55,17 +52,14 @@ export class AllExceptionsFilter implements ExceptionFilter {
         details = (res as any).details;
       }
     }
-    // 3. Tangani Validasi Prisma (Tipe data salah, dll)
     else if (exception instanceof Prisma.PrismaClientValidationError) {
       status = HttpStatus.BAD_REQUEST;
       message = "Validasi Gagal";
       
-      // ⚠️ PESAN GENERIK (Tidak membocorkan struktur folder)
       details = "Format data tidak valid atau tidak lengkap. Periksa kembali tipe data yang dikirim.";
       
       this.logger.error(`[PRISMA VALIDATION ERROR] ${exception.message}`);
     }
-    // 4. Tangani Error Query Prisma (Constraint, Not Found)
     else if (exception instanceof Prisma.PrismaClientKnownRequestError) {
       status = HttpStatus.BAD_REQUEST;
       if (exception.code === "P2002") {
@@ -84,17 +78,14 @@ export class AllExceptionsFilter implements ExceptionFilter {
       }
       this.logger.error(`[PRISMA ERROR ${exception.code}] ${exception.message}`);
     }
-    // 5. Tangani Error Umum lainnya (termasuk error custom dari PG)
     else if (exception instanceof Error) {
       let rawMsg = exception.message;
 
-      // === PERBAIKAN DI-06: Tangani PayloadTooLargeError ===
       if (exception.name === 'PayloadTooLargeError') {
-        status = HttpStatus.PAYLOAD_TOO_LARGE; // 413
+        status = HttpStatus.PAYLOAD_TOO_LARGE; 
         message = "Ukuran data terlalu besar.";
         details = "Pastikan ukuran kiriman tidak melebihi batas maksimal server (1MB).";
       } 
-      // =====================================================
       else if (rawMsg.startsWith("{") && rawMsg.endsWith("}")) {
         try {
           const parsed = JSON.parse(rawMsg);
@@ -126,7 +117,6 @@ export class AllExceptionsFilter implements ExceptionFilter {
       exception instanceof Error ? exception.stack : "",
     );
 
-    // RESPONSE KE CLIENT (Aman, tanpa Stack Trace)
     response.status(status).json({
       success: false,
       statusCode: status,

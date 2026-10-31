@@ -18,11 +18,8 @@ async function bootstrap() {
   
   app.use(helmet());
 
-  // === PERBAIKAN API-17: Tolak Duplikasi Authorization Header ===
-  // Posisikan paling atas sebelum body parser agar langsung ditolak
   app.use((req: any, res: any, next: any) => {
     const auth = req.headers['authorization'];
-    // Cek jika ada koma (indikasi duplikasi header seperti: "Bearer token1, Bearer token2")
     if (auth && typeof auth === 'string' && auth.includes(',')) {
       return res.status(400).json({
         success: false,
@@ -32,9 +29,7 @@ async function bootstrap() {
     }
     next();
   });
-  // ==============================================================
 
-  // Batasi ukuran body request (Maks 1MB) - Perbaikan DI-06
   app.use(json({ limit: '1mb' }));
   app.use(urlencoded({ extended: true, limit: '1mb' }));
 

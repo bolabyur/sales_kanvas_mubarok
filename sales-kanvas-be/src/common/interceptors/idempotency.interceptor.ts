@@ -10,7 +10,7 @@ import { Observable, of } from "rxjs";
 import { tap } from "rxjs/operators";
 import { PrismaService } from "../../prisma/prisma.service";
 import { Prisma } from "@prisma/client";
-import * as crypto from "crypto"; // ⚠️ PASTIKAN IMPORT INI ADA
+import * as crypto from "crypto"; 
 
 @Injectable()
 export class IdempotencyInterceptor implements NestInterceptor {
@@ -35,22 +35,18 @@ export class IdempotencyInterceptor implements NestInterceptor {
 
     const keyString = String(idempotencyKey);
 
-    // Cek Panjang Key
     if (keyString.length > 255) {
       throw new BadRequestException("Idempotency Key tidak boleh melebihi 255 karakter.");
     }
 
-    // === PERBAIKAN API-09: HASH KEY ===
     let hashedKey = keyString;
     try {
-      // Hash menggunakan SHA-256 agar emoji/unicode aman di database
       hashedKey = crypto.createHash("sha256").update(keyString).digest("hex");
       this.logger.debug(`[IDEMPOTENCY] Key hashed: ${keyString} -> ${hashedKey}`);
     } catch (err: any) {
       this.logger.error(`[IDEMPOTENCY] Gagal hash key: ${err.message}`);
       throw new BadRequestException("Idempotency Key tidak valid.");
     }
-    // ===================================
 
     const existingRecord = await this.prisma.idempotencyRecord.findUnique({
       where: { key: hashedKey },
