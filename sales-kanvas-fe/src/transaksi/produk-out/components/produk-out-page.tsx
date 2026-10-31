@@ -45,13 +45,11 @@ export function ProdukOutPage() {
           </TableHeader>
           <TableBody>
             {produkOuts.map((po: any) => {
-              // Ambil nama Sales dari relasi personil
               const salesPersonil = po.kasbonProduk?.salesKanvasPlan?.salesKanvasPersonil?.find(
                 (p: any) => String(p.position).toLowerCase() === "sales"
               );
               const namaSales = salesPersonil?.employee?.name || "-";
               
-              // Hitung jenis produk dan total qty
               const jenisProduk = po.detailProdukOuts?.length || 0;
               const totalQty = po.detailProdukOuts?.reduce((sum: number, item: any) => sum + item.qty, 0) || 0;
 

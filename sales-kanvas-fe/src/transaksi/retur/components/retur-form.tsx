@@ -23,7 +23,6 @@ export function ReturForm({ open, onOpenChange }: Props) {
   const create = useCreateRetur();
   const { data: user } = useMe();
 
-  // Ambil Data Master
   const { data: outletResponse } = useOutlet();
   const outlets = Array.isArray(outletResponse) ? outletResponse : ((outletResponse as any)?.items || []);
   
@@ -42,14 +41,12 @@ export function ReturForm({ open, onOpenChange }: Props) {
   const { data: batchesResponse = [] } = useBatches();
   const batches = Array.isArray(batchesResponse) ? batchesResponse : ((batchesResponse as any)?.items || []);
   
-  // ✅ PERBAIKAN: Ekstraksi data invoice yang aman
   const { data: invoicesResponse = [] } = useInvoices();
   const invoices = Array.isArray(invoicesResponse) ? invoicesResponse : ((invoicesResponse as any)?.items || []);
 
   const [selectedOutlet, setSelectedOutlet] = useState("");
   const [invoiceId, setInvoiceId] = useState("");
   
-  // ✅ Filter Invoice berdasarkan Outlet DAN Kepemilikan
   const filteredInvoices = invoices.filter((inv: any) => {
     if (inv.outlet_id?.toString() !== selectedOutlet) return false;
 
@@ -57,7 +54,6 @@ export function ReturForm({ open, onOpenChange }: Props) {
     const isGlobalRole = ["Super Admin", "Supervisor Pemasaran", "Kasir / Tim Keuangan", "superadmin"].includes(roleName);
     
     if (!isGlobalRole) {
-      // Sekarang data salesKanvasPlan harusnya sudah ada dari Backend
       return inv.salesKanvasPlan?.user_id === user?.id;
     }
 

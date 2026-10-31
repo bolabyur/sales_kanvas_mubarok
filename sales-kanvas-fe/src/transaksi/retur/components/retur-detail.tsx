@@ -9,7 +9,6 @@ type Props = { open: boolean; onOpenChange: (open: boolean) => void; data: Retur
 export function ReturDetail({ open, onOpenChange, data }: Props) {
   if (!data) return null;
 
-  // Hitung total qty untuk pembagian proporsional (jika ada multi-item)
   const totalQty = data.detailInvoiceReturs?.reduce((sum: number, item: any) => sum + item.qty, 0) || 1;
   const hargaPerItem = Number(data.total_nilai_retur) / totalQty;
 

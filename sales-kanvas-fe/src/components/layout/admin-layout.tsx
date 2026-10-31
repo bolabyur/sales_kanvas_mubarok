@@ -7,8 +7,6 @@ import {
 import { pageTitle } from "@/lib/app";
 import { AppSidebar } from "./app-sidebar";
 import { isActive, NAV } from "./nav";
-import { GlobalSearch } from "@/components/shared/global-search";
-// 👇 TAMBAHKAN BARIS IMPORT INI
 import { NotificationCenter } from "@/components/shared/notification-center"; 
 import { useSocketNotifications } from "@/hooks/useSocketNotifications";
 
@@ -18,7 +16,6 @@ export function AdminLayout() {
     isActive(pathname, i.url),
   )?.title;
 
-  // AKTIFKAN LISTENER SOCKET
   useSocketNotifications();
 
   return (
@@ -29,13 +26,10 @@ export function AdminLayout() {
         <header className="flex h-16 items-center justify-between px-4 border-b bg-background">
           <div className="flex items-center gap-4">
             <SidebarTrigger />
-            {/* Perbaikan UI: Judul menyesuaikan halaman yang sedang dibuka */}
             <h1 className="text-lg font-semibold">{title || "Sales Kanvas"}</h1>
           </div>
 
           <div className="flex items-center gap-3">
-            <GlobalSearch />
-            {/* 👇 SEKARANG SUDAH BISA DIPAKAI KARENA SUDAH ADA IMPORT DI ATAS */}
             <NotificationCenter />
           </div>
         </header>

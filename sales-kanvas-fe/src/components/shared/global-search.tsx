@@ -16,7 +16,6 @@ export function GlobalSearch() {
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const navigate = useNavigate();
 
-  // Shortcut Ctrl + K
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
@@ -28,7 +27,6 @@ export function GlobalSearch() {
     return () => document.removeEventListener("keydown", down);
   }, []);
 
-  // Debounce query
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQuery(query), 300);
     return () => clearTimeout(timer);

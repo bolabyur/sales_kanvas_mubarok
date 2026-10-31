@@ -23,7 +23,6 @@ export function ProdukOutForm({ open, onOpenChange }: Props) {
   const create = useCreateProdukOut();
   const { data: bonList = [] } = useKasbonProduks();
   
-  // PERBAIKAN: Filter BON yang belum di-onloading dan tidak batal
   const availableBons = bonList.filter((b: any) => 
     b.status !== "ONLOADING" && b.status !== "BATAL" && !b.is_deleted
   );
@@ -42,7 +41,7 @@ export function ProdukOutForm({ open, onOpenChange }: Props) {
       kasbon_produk_id: Number(fd.get("kasbon_produk_id")),
       gudang_id: Number(fd.get("gudang_id")),
       tgl_keluar: new Date(fd.get("tgl_keluar") as string).toISOString(),
-      source_type: fd.get("source_type") as TipeSumberOut, // PERBAIKAN: source_type
+      source_type: fd.get("source_type") as TipeSumberOut, 
     }, {
       onSuccess: () => {
         toast.success("Loading berhasil diproses!");

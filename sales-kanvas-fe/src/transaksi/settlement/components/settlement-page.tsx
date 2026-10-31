@@ -26,7 +26,6 @@ export function SettlementPage() {
   const [search, setSearch] = useState("");
   const [formOpen, setFormOpen] = useState(false);
 
-  // === PERHITUNGAN RINGKASAN KEUANGAN ===
   const totalTunai = data.reduce((sum, item) => sum + Number(item.total_penjualan_tunai), 0);
   const totalKasbon = data.reduce((sum, item) => sum + Number(item.total_kasbon_realisasi), 0);
   const totalPiutang = data.reduce((sum, item) => sum + Number(item.total_piutang_baru), 0);

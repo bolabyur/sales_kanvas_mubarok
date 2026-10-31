@@ -25,7 +25,6 @@ const TYPE_PRICE_OPTIONS = [
   { value: "Retail", label: "Retail (Data Lama)" },
 ];
 
-// Dummy Options (Ganti dengan data API jika sudah ada)
 const BRAND_OPTIONS = [
   { value: "1", label: "Mubarokfood" },
   { value: "2", label: "Brand Lain" },

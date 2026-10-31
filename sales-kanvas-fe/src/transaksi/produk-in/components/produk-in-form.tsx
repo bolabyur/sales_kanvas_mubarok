@@ -8,7 +8,7 @@ import { FormField } from "@/components/shared/form-field";
 import { Modal } from "@/components/shared/modal";
 import { SelectInput } from "@/components/shared/select-input";
 import { useCreateProdukIn } from "../hooks/useProdukIn";
-import { usePlan, usePlans } from "@/plan/hooks/usePlan"; // <-- Tambahkan usePlan
+import { usePlan, usePlans } from "@/plan/hooks/usePlan"; 
 import { useProducts } from "@/master/product/hooks/useProduct";
 import { useGudang } from "@/master/gudang/hooks/useGudang";
 import type { TipeSumberIn, DetailProdukInPayload } from "../types/produk-in.types";
@@ -32,20 +32,17 @@ export function ProdukInForm({ open, onOpenChange }: Props) {
   const { data: products = [] } = useProducts();
   const { data: gudangList = [] } = useGudang();
 
-  const [planId, setPlanId] = useState(""); // State untuk Plan
+  const [planId, setPlanId] = useState(""); 
   const [details, setDetails] = useState<Partial<DetailProdukInPayload>[]>([
     { produk_id: undefined, no_batch: "", expired_date: "", qty_sisa: 1, kondisi: "Bagus" }
   ]);
 
-  // Ambil detail Plan untuk hitung sisa
   const { data: planDetail } = usePlan(Number(planId) || 0);
 
-  // === LOGIKA AUTO-FILL SISA BARANG ===
   useEffect(() => {
     if (!planDetail) return;
 
-    // 1. Kumpulkan semua barang yang keluar (Onloading)
-    const onloadedMap = new Map<number, number>(); // produk_id : qty
+    const onloadedMap = new Map<number, number>(); 
     planDetail.kasbonProduks?.forEach((bon: any) => {
       bon.detailKasbonProduks?.forEach((detail: any) => {
         const current = onloadedMap.get(detail.produk_id) || 0;
@@ -53,7 +50,6 @@ export function ProdukInForm({ open, onOpenChange }: Props) {
       });
     });
 
-    // 2. Kumpulkan semua barang yang sudah terjual (Invoice)
     const soldMap = new Map<number, number>();
     planDetail.invoiceOutlets?.forEach((inv: any) => {
       inv.detailInvoiceOutlets?.forEach((detail: any) => {
@@ -62,7 +58,6 @@ export function ProdukInForm({ open, onOpenChange }: Props) {
       });
     });
 
-    // 3. Hitung Sisa = Onloaded - Sold
     const expectedLeftovers: Partial<DetailProdukInPayload>[] = [];
     onloadedMap.forEach((onloadedQty, produkId) => {
       const soldQty = soldMap.get(produkId) || 0;
@@ -72,7 +67,7 @@ export function ProdukInForm({ open, onOpenChange }: Props) {
         expectedLeftovers.push({
           produk_id: produkId,
           qty_sisa: sisa,
-          no_batch: "", // Dikosongkan, Gudang wajib cek fisik
+          no_batch: "",
           expired_date: "",
           kondisi: "Bagus",
         });
@@ -87,7 +82,7 @@ export function ProdukInForm({ open, onOpenChange }: Props) {
       toast.info("Tidak ada sisa barang yang perlu dikembalikan (semua terjual).");
     }
 
-  }, [planDetail]); // Jalan setiap kali planDetail berubah
+  }, [planDetail]); 
 
   const handleOpenChange = (o: boolean) => {
     if (!o) {

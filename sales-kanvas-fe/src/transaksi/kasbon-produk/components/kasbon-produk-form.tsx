@@ -39,11 +39,9 @@ const formatRupiah = (value: number) => {
 };
 
 const getErrorMessage = (err: any) => {
-  // ✅ Membaca error Zod dari backend (Array of Objects)
   if (err?.details && Array.isArray(err.details)) {
     return err.details.map((d: any) => `${d.field}: ${d.message}`).join(", ");
   }
-  // Fallback ke pesan biasa
   const msg = err.response?.data?.message || err.message;
   if (Array.isArray(msg)) return msg.map((m: any) => m.message || m).join(", ");
   if (typeof msg === "object") return JSON.stringify(msg);
@@ -97,27 +95,22 @@ export function KasbonProdukForm({ open, onOpenChange, defaultPlanId }: Props) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // ✅ VALIDASI 1: Plan
     if (!planId) return toast.error("Pilih Rencana Kanvas terlebih dahulu.");
 
-    // ✅ VALIDASI 2: Produk
     if (details.some((d) => !d.product_id || !d.qty_bawa))
       return toast.error("Lengkapi data produk dan qty.");
 
-    // ✅ VALIDASI 3: Operasional (Wajib)
     if (operasional.some((o) => !o.nama_pengeluaran.trim() || o.nominal <= 0))
       return toast.error(
         "Lengkapi data Kasbon Operasional (Nama & Nominal wajib diisi).",
       );
 
-    // ✅ VALIDASI 4: Stok
     const isStokKurang = details.some(
       (d) => d.product_id && d.qty_bawa > getAvailableStock(d.product_id),
     );
     if (isStokKurang)
       return toast.error("Ada barang yang stoknya tidak mencukupi!");
 
-    // 🚀 Kirim ke Backend
     create.mutate(
       {
         sales_kanvas_plan_id: Number(planId),
@@ -140,7 +133,6 @@ export function KasbonProdukForm({ open, onOpenChange, defaultPlanId }: Props) {
           setOperasional([{ ...emptyOps }]);
         },
         onError: (err: any) => {
-          // ✅ Toast ini yang akan muncul jika backend menolak (misal: validasi Zod)
           toast.error("Gagal mengajukan BON", {
             description: getErrorMessage(err),
           });
@@ -186,7 +178,6 @@ export function KasbonProdukForm({ open, onOpenChange, defaultPlanId }: Props) {
           </span>
         </div>
 
-        {/* --- BAGIAN PRODUK --- */}
         <div className="border rounded-lg p-4 space-y-4 bg-muted/10 shadow-sm">
           <div className="flex justify-between items-center mb-2">
             <h4 className="font-semibold text-sm">
@@ -300,10 +291,8 @@ export function KasbonProdukForm({ open, onOpenChange, defaultPlanId }: Props) {
           })}
         </div>
 
-        {/* --- BAGIAN OPERASIONAL --- */}
         <div className="border rounded-lg p-4 space-y-4 bg-muted/10 shadow-sm">
           <div className="flex justify-between items-center mb-2">
-            {/* ✅ PERBAIKAN: Label diubah menjadi Wajib */}
             <h4 className="font-semibold text-sm text-primary">
               Kasbon Operasional (Wajib)
             </h4>

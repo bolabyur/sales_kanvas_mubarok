@@ -50,7 +50,6 @@ export function PlanForm({ open, onOpenChange, defaultPlan }: Props) {
         setPersonils(personilsData.map((p: any) => ({ employee_id: String(p.employee_id), position: p.position })));
       }
     } else if (open && !defaultPlan) {
-      // Auto-select user yang login sebagai "Sales"
       try {
         const loggedUser = JSON.parse(localStorage.getItem("sk_user") || "{}");
         if (loggedUser?.karyawan_id) {
@@ -80,14 +79,14 @@ export function PlanForm({ open, onOpenChange, defaultPlan }: Props) {
     const tglBerangkat = fd.get("tgl_pergi_kanvas") as string;
 
     const payload: PlanPayload = {
-      tgl_invoice: new Date(tglBerangkat).toISOString(), // Otomatis sama dengan tgl berangkat
+      tgl_invoice: new Date(tglBerangkat).toISOString(), 
       tgl_pergi_kanvas: new Date(tglBerangkat).toISOString(),
       tgl_kembali_kanvas: fd.get("tgl_kembali_kanvas") ? new Date(fd.get("tgl_kembali_kanvas") as string).toISOString() : null,
       market_area_id: Number(fd.get("market_area_id")),
       vehicle_id: Number(fd.get("vehicle_id")),
       note: (fd.get("note") as string) || null,
       salesKanvasPersonil: personils.map((p) => ({ employee_id: Number(p.employee_id), position: p.position })),
-      salesKanvasPlanDetail: [], // Barang diinput di BON
+      salesKanvasPlanDetail: [], 
     };
 
     create.mutate(payload, {
@@ -97,7 +96,6 @@ export function PlanForm({ open, onOpenChange, defaultPlan }: Props) {
       },
       onError: (err: any) => {
         console.error("Gagal membuat plan:", err);
-        // ✅ PERBAIKAN: Baca err.details dari backend dan tampilkan ke toast (mencegah layar putih)
         if (err?.details && Array.isArray(err.details)) {
           const messages = err.details.map((e: any) => `${e.field}: ${e.message}`).join(", ");
           toast.error("Validasi Gagal", { description: messages });

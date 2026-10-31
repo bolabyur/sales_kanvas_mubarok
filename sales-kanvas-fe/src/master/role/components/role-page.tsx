@@ -32,16 +32,13 @@ export function RolePage() {
     setSelectedPermissions(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]);
   };
 
-  // FITUR BARU: Centang Semua per Modul
   const toggleModule = (modulePerms: any[]) => {
     const moduleIds = modulePerms.map(p => p.id);
     const isAllSelected = moduleIds.every(id => selectedPermissions.includes(id));
     
     if (isAllSelected) {
-      // Jika sudah dicentang semua, hapus centangnya
       setSelectedPermissions(prev => prev.filter(id => !moduleIds.includes(id)));
     } else {
-      // Jika belum, centang semua
       setSelectedPermissions(prev => [...new Set([...prev, ...moduleIds])]);
     }
   };
@@ -60,7 +57,6 @@ export function RolePage() {
     });
   };
 
-  // Pengelompokan Modul & Diurutkan Berdasarkan Abjad
   const groupedPermissions = permissions.reduce((acc, p) => {
     const [module] = p.name.split(":");
     if (!acc[module]) acc[module] = [];

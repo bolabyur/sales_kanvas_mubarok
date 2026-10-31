@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Plus, FileText, CheckCircle2, Loader2 } from "lucide-react"; // ✅ Tambah Loader2
-import { toast } from "sonner"; // ✅ Tambah toast
+import { Plus, FileText, CheckCircle2, Loader2 } from "lucide-react"; 
+import { toast } from "sonner"; 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/shared/data-table";
@@ -52,7 +52,6 @@ export function ReturPage() {
     {
       id: "actions",
       cell: ({ row }) => {
-        // ✅ Cek apakah baris ini yang sedang diproses
         const isApprovingThisRow = approve.isPending && approve.variables === row.original.id;
 
         return (
@@ -65,13 +64,12 @@ export function ReturPage() {
               <Button 
                 variant="default" 
                 size="sm"
-                disabled={approve.isPending} // Kunci semua tombol jika ada proses
+                disabled={approve.isPending}
                 onClick={() => {
                   if (approve.isPending) return;
                   
                   approve.mutate(row.original.id, {
                     onError: (err: any) => {
-                      // ✅ Tangkap error backend dan tampilkan sebagai Toast
                       const msg = err.response?.data?.message || err.message;
                       toast.error("Gagal Approve Retur", { description: msg });
                     }

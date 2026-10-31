@@ -6,7 +6,6 @@ import type { Settlement, SettlementPayload } from "../types/settlement.types";
 const URL = "/transaksi/settlement";
 const KEY = ["transaksi", "settlement"];
 
-// Tipe data response dari backend (Pagination)
 type SettlementResponse = {
   data: Settlement[];
   meta: { total: number; page: number; limit: number; total_pages: number };
@@ -15,7 +14,7 @@ type SettlementResponse = {
 export function useSettlements() {
   return useQuery({ 
     queryKey: KEY, 
-    queryFn: () => api<SettlementResponse>(URL) // <--- Ubah tipe ke Object
+    queryFn: () => api<SettlementResponse>(URL) 
   });
 }
 
@@ -31,7 +30,6 @@ export function useCreateSettlement() {
         headers: { "x-idempotency-key": idempotencyKey.current }
       }),
     onSuccess: () => {
-      // Refresh tabel setelah simpan
       qc.invalidateQueries({ queryKey: KEY });
       qc.invalidateQueries({ queryKey: ["plan"] }); 
       idempotencyKey.current = crypto.randomUUID();

@@ -10,12 +10,11 @@ export function useBatches() {
   return useQuery({ queryKey: KEY, queryFn: () => api<Batch[]>(URL) });
 }
 
-// PERBAIKAN: Tambahkan hook untuk mengambil 1 batch spesifik (untuk detail)
 export function useBatch(id: number) {
   return useQuery({
     queryKey: [...KEY, id],
     queryFn: () => api<Batch>(`${URL}/${id}`),
-    enabled: !!id, // Hanya jalan jika ID ada
+    enabled: !!id, 
   });
 }
 
@@ -48,8 +47,8 @@ export function useAdjustStock() {
         body: JSON.stringify(payload),
       }),
     onSuccess: (_, variables) => {
-      qc.invalidateQueries({ queryKey: KEY }); // Refresh tabel utama
-      qc.invalidateQueries({ queryKey: [...KEY, variables.id] }); // PERBAIKAN: Refresh detail modal
+      qc.invalidateQueries({ queryKey: KEY });
+      qc.invalidateQueries({ queryKey: [...KEY, variables.id] }); 
       toast.success("Stok berhasil dikoreksi");
     },
     onError: (err: any) => {

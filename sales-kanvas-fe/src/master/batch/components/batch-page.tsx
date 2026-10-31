@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Plus, SlidersHorizontal } from "lucide-react"; // <-- Tambahkan SlidersHorizontal
+import { Plus, SlidersHorizontal } from "lucide-react"; 
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -13,9 +13,8 @@ import { formatDate } from "@/lib/format";
 import { useBatches, useDeleteBatch } from "../hooks/useBatch";
 import type { Batch } from "../types/batch.types";
 import { BatchForm } from "./batch-form";
-import { BatchDetailModal } from "./batch-detail-modal"; // <-- Import Modal Baru
+import { BatchDetailModal } from "./batch-detail-modal"; 
 
-// Helper untuk menghitung selisih hari
 const getDaysUntilExpired = (expiredDate: string) => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -35,7 +34,6 @@ export function BatchPage() {
   const [editing, setEditing] = useState<Batch | null>(null);
   const [deleting, setDeleting] = useState<Batch | null>(null);
   
-  // STATE BARU: Untuk menyimpan batch yang akan dikoreksi
   const [detailBatch, setDetailBatch] = useState<Batch | null>(null);
 
   const [activeTab, setActiveTab] = useState("all");
@@ -97,7 +95,7 @@ export function BatchPage() {
             variant="ghost" 
             size="icon" 
             className="h-8 w-8 text-muted-foreground hover:text-primary"
-            onClick={() => setDetailBatch(row.original)} // Membuka Modal Koreksi
+            onClick={() => setDetailBatch(row.original)} 
             title="Detail & Koreksi Stok"
           >
             <SlidersHorizontal className="h-4 w-4" />

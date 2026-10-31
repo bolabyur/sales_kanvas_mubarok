@@ -5,7 +5,6 @@ import type { Plan, PlanPayload, PlanStatus, PlanListResponse } from "../types/p
 const URL = "/plan";
 const KEY = ["plan"];
 
-// PERBAIKAN: Menerima parameter pagination & search
 export function usePlans(page: number = 1, limit: number = 10, search: string = "") {
   return useQuery({ 
     queryKey: [...KEY, page, limit, search], 
@@ -18,7 +17,7 @@ export function usePlans(page: number = 1, limit: number = 10, search: string = 
       
       return api<PlanListResponse>(`${URL}?${params.toString()}`);
     },
-    placeholderData: keepPreviousData, // Mencegah tabel berkedip/blank saat ganti halaman
+    placeholderData: keepPreviousData, 
   });
 }
 

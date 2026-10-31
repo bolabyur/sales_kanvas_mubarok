@@ -67,7 +67,6 @@ export function EmployeeForm({ open, onOpenChange, employee }: Props) {
     const fd = new FormData(e.currentTarget);
     setErrors({});
 
-    // PERBAIKAN: Pastikan tanggal valid ISO string
     const rawTglLahir = text(fd, "tgl_lahir");
     const rawTglMasuk = text(fd, "tgl_masuk");
 
@@ -81,7 +80,6 @@ export function EmployeeForm({ open, onOpenChange, employee }: Props) {
         address: textOrNull(fd, "address"),
         gender: text(fd, "gender") as Gender,
         agama: text(fd, "agama"),
-        // Konversi ke ISO 8601 string lengkap
         tgl_lahir: rawTglLahir ? new Date(rawTglLahir).toISOString() : "", 
         tgl_masuk: rawTglMasuk ? new Date(rawTglMasuk).toISOString() : "",
         hari_libur_mingguan: numOrNull(fd, "hari_libur_mingguan"),

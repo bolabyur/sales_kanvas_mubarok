@@ -11,7 +11,6 @@ import { useInvoices } from "@/transaksi/invoice/hooks/useInvoice";
 
 type Props = { open: boolean; onOpenChange: (open: boolean) => void };
 
-// ✅ PERBAIKAN 1: Sesuaikan value dengan Enum di Backend (Huruf kapital di awal)
 const TIPE_BAYAR = [
   { value: "Transfer", label: "Transfer Bank" },
   { value: "Tunai", label: "Tunai" },
@@ -23,7 +22,6 @@ const getLocalDateTime = () => {
   return now.toISOString().slice(0, 16);
 };
 
-// ✅ PERBAIKAN 2: Fungsi penangkap error yang kebal dari Zod Array
 const getErrorMessage = (err: any) => {
   if (err?.details && Array.isArray(err.details)) {
     return err.details.map((d: any) => `${d.field}: ${d.message}`).join(", ");
@@ -61,7 +59,6 @@ export function PembayaranForm({ open, onOpenChange }: Props) {
     }, {
       onSuccess: () => { toast.success("Pembayaran berhasil dicatat!"); handleOpenChange(false); },
       onError: (error: any) => {
-        // ✅ PERBAIKAN 3: Gunakan getErrorMessage agar tidak crash
         toast.error("Gagal Mencatat Pembayaran", {
           description: getErrorMessage(error),
         });

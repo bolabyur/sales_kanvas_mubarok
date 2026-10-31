@@ -93,10 +93,8 @@ export function PembayaranPage() {
         }
       />
       
-      {/* Form Input Pembayaran */}
       <PembayaranForm open={formOpen} onOpenChange={setFormOpen} />
 
-      {/* Modal Detail Pembayaran */}
       <Modal 
         open={!!selectedPayment} 
         onOpenChange={(o) => !o && setSelectedPayment(null)} 

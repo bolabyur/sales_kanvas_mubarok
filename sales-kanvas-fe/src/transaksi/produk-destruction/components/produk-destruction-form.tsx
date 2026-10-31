@@ -1,6 +1,6 @@
 import { useState, type SubmitEvent } from "react";
 import { toast } from "sonner";
-import { Plus, X, AlertTriangle, ShieldCheck } from "lucide-react"; // <-- Trash2 dihapus
+import { Plus, X, AlertTriangle, ShieldCheck } from "lucide-react"; 
 import { Button } from "@/components/ui/button";
 import { DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -24,7 +24,6 @@ const ALASAN_OPTIONS = [
   { value: "Lainnya", label: "Lainnya" },
 ];
 
-// Helper Waktu Lokal (WIB)
 const getLocalDateTime = () => {
   const now = new Date();
   now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
@@ -48,7 +47,6 @@ export function ProdukDestructionForm({ open, onOpenChange }: Props) {
   const [onlyExpired, setOnlyExpired] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   
-  // Auto-fill Petugas dari localStorage (jika ada)
   const currentUser = JSON.parse(localStorage.getItem("sk_user") || "{}");
   const petugasName = currentUser?.name || "Admin Gudang";
 
@@ -63,7 +61,7 @@ export function ProdukDestructionForm({ open, onOpenChange }: Props) {
   const handleDetailChange = (index: number, field: string, value: any) => {
     const newDetails = [...details];
     newDetails[index] = { ...newDetails[index], [field]: value };
-    if (field === "produk_id") newDetails[index].batch_id = undefined; // Reset batch saat ganti produk
+    if (field === "produk_id") newDetails[index].batch_id = undefined; 
     setDetails(newDetails);
   };
 
@@ -77,14 +75,12 @@ export function ProdukDestructionForm({ open, onOpenChange }: Props) {
       return toast.error("Lengkapi semua data barang!");
     }
     
-    // Validasi Frontend: Cegah Qty melebihi Stok Batch
     const isOverStock = details.some((d) => {
       const batch = batches.find((b: any) => b.id === d.batch_id);
       return batch && d.qty_dimusnahkan! > batch.stok_gudang;
     });
     if (isOverStock) return toast.error("Qty melebihi stok batch yang tersedia!");
 
-    // Buka Confirmation Dialog sebelum eksekusi
     setConfirmOpen(true);
   }
 

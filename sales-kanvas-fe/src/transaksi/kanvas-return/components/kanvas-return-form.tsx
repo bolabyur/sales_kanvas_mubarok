@@ -8,13 +8,12 @@ import { FormField } from "@/components/shared/form-field";
 import { Modal } from "@/components/shared/modal";
 import { SelectInput } from "@/components/shared/select-input";
 import { useCreateKanvasReturn } from "../hooks/useKanvasReturn";
-import { usePlan, usePlans } from "@/plan/hooks/usePlan"; // <-- Import usePlan
+import { usePlan, usePlans } from "@/plan/hooks/usePlan"; 
 import { useGudang } from "@/master/gudang/hooks/useGudang";
 import type { DetailKanvasReturnPayload } from "../types/kanvas-return.types";
 
 type Props = { open: boolean; onOpenChange: (open: boolean) => void };
 
-// Tipe data internal untuk UI
 type DisplayRow = DetailKanvasReturnPayload & { 
   produk_name: string; 
   no_batch: string; 
@@ -33,21 +32,16 @@ export function KanvasReturnForm({ open, onOpenChange }: Props) {
   const [planId, setPlanId] = useState("");
   const [details, setDetails] = useState<DisplayRow[]>([]);
 
-  // Tarik detail Plan
   const { data: planDetail, isLoading: isLoadingPlan } = usePlan(Number(planId) || 0);
 
-  // === LOGIKA AUTO-FILL SISA BARANG BERDASARKAN BATCH ===
   useEffect(() => {
     if (!planDetail) {
       setDetails([]);
       return;
     }
 
-    // 1. Map untuk menyimpan stok per batch_id
-    // Format: batch_id -> { produk_id, no_batch, produk_name, qty }
     const batchMap = new Map<number, DisplayRow>();
 
-    // 2. Kumpulkan Barang Keluar (Onloading)
     planDetail.kasbonProduks?.forEach((bon: any) => {
       bon.produkOuts?.forEach((po: any) => {
         po.detailProdukOuts?.forEach((d: any) => {
@@ -65,7 +59,6 @@ export function KanvasReturnForm({ open, onOpenChange }: Props) {
       });
     });
 
-    // 3. Kurangi dengan Barang Terjual (Invoice)
     planDetail.invoiceOutlets?.forEach((inv: any) => {
       inv.detailInvoiceOutlets?.forEach((d: any) => {
         if (batchMap.has(d.batch_id)) {
@@ -74,7 +67,6 @@ export function KanvasReturnForm({ open, onOpenChange }: Props) {
       });
     });
 
-    // 4. Kurangi dengan yang sudah pernah diretur (jika ada)
     planDetail.kanvasReturns?.forEach((kr: any) => {
       kr.details?.forEach((d: any) => {
         if (batchMap.has(d.batch_id)) {
@@ -83,7 +75,6 @@ export function KanvasReturnForm({ open, onOpenChange }: Props) {
       });
     });
 
-    // 5. Filter hanya yang sisanya > 0
     const sisaBarang = Array.from(batchMap.values()).filter((b) => b.qty > 0);
     setDetails(sisaBarang);
 
@@ -110,7 +101,6 @@ export function KanvasReturnForm({ open, onOpenChange }: Props) {
     if (!planId) return toast.error("Pilih Plan terlebih dahulu!");
     if (details.length === 0) return toast.error("Tidak ada barang sisa untuk diretur.");
 
-    // Validasi Alasan jika kondisi Rusak/Expired
     const missingAlasan = details.some(d => d.kondisi !== "BAGUS" && !d.alasan);
     if (missingAlasan) {
       return toast.error("Alasan wajib diisi untuk barang RUSAK atau EXPIRED!");
@@ -230,11 +220,10 @@ export function KanvasReturnForm({ open, onOpenChange }: Props) {
                     />
                   </FormField>
                 ) : (
-                  <div className="hidden md:block"></div> // Placeholder agar layout tetap rapi
+                  <div className="hidden md:block"></div> 
                 )}
               </div>
 
-              {/* Tombol Hapus (Jika Gudang memilih tidak meretur item ini) */}
               <div className="md:col-span-1 flex justify-end pt-5">
                 <Button type="button" variant="ghost" size="icon" onClick={() => setDetails(details.filter((_, idx) => idx !== i))}>
                   <X className="h-4 w-4 text-destructive" />

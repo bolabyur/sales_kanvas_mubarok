@@ -27,7 +27,7 @@ export function ProdukDestructionPage() {
     { 
       accessorKey: "petugas", 
       header: "Petugas", 
-      cell: ({ row }) => row.original.petugas || "Admin Gudang" // Fallback jika tidak ada
+      cell: ({ row }) => row.original.petugas || "Admin Gudang" 
     },
     { 
       accessorKey: "alasan", 

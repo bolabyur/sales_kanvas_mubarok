@@ -14,7 +14,6 @@ export function useSaveProduct() {
   return useMutation({
     mutationFn: async ({ id, prices, ...payload }: ProductWithPrices) => {
       
-      // 1. Bersihkan nilai null / undefined
       const cleanPayload: any = {};
       Object.keys(payload).forEach((key) => {
         const val = (payload as any)[key];
@@ -23,12 +22,10 @@ export function useSaveProduct() {
         }
       });
 
-      // 2. PERBAIKAN: Ubah tipe harga "Retail" menjadi "FIXED" agar lolos validasi Zod backend
       if (cleanPayload.type_price !== "FIXED" && cleanPayload.type_price !== "PERSENTASE") {
         cleanPayload.type_price = "FIXED";
       }
 
-      // 3. Sertakan array harga (jika ada)
       if (prices && prices.length > 0) {
         cleanPayload.prices = prices;
       }
@@ -44,7 +41,6 @@ export function useSaveProduct() {
       qc.invalidateQueries({ queryKey: KEY });
     },
     onError: (error: any) => {
-      // Cukup console.log, JANGAN throw error agar React tidak crash
       console.error("API Error:", error); 
     }
   });

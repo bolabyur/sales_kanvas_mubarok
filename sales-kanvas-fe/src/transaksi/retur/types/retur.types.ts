@@ -19,8 +19,8 @@ export type Retur = {
   invoice_outlet_id: number | null;
   gudang_retur_id: number;
   total_nilai_retur: string;
-  status: string; // <-- PERBAIKAN: Tambahkan ini untuk menghilangkan error merah
-  is_deleted: boolean; // Opsional, untuk soft delete
+  status: string; 
+  is_deleted: boolean; 
   created_at: string;
   updated_at: string;
   outlet?: any;

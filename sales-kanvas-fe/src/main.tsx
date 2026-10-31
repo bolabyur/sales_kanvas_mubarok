@@ -18,7 +18,6 @@ const queryClient = new QueryClient({
   queryCache: new QueryCache({
     onError: (error: unknown) => { 
       if (error instanceof ApiError) {
-        // ✅ ABAIKAN ERROR 401 (UNAUTHORIZED) DAN 403 (FORBIDDEN)
         if (error.status === 401 || error.status === 403) return;
         
         toast.error(error.message || "Terjadi kesalahan saat mengambil data");
@@ -31,7 +30,6 @@ const queryClient = new QueryClient({
         if (error.status === 401) {
           queryClient.setQueryData(ME_KEY, null);
         } else if (error.status === 403) {
-          // ✅ ABAIKAN ERROR 403 SAAT SIMPAN DATA
           return; 
         } else {
           toast.error(error.message || "Gagal menyimpan data", {
@@ -47,7 +45,6 @@ const queryClient = new QueryClient({
     queries: {
       retry: (count, e: unknown) => {
         if (e instanceof ApiError) {
-          // ✅ JANGAN RETRY JIKA ERRORNYA 401 ATAU 403
           if (e.status === 401 || e.status === 403) return false;
           return e.status >= 500 && count < 2;
         }

@@ -18,7 +18,6 @@ export function SettlementForm({ open, onOpenChange }: Props) {
   const { data: planResponse } = usePlans();
   const planList = Array.isArray(planResponse) ? planResponse : ((planResponse as any)?.items || []);
   
-  // ✅ Filter: Harus DISETUJUI dan Punya Invoice
   const activePlans = planList.filter((p: any) => {
     const isApproved = String(p.status).toUpperCase() === "DISETUJUI";  
     const hasInvoices = Array.isArray(p.invoiceOutlets) && p.invoiceOutlets.length > 0; 
@@ -49,7 +48,6 @@ export function SettlementForm({ open, onOpenChange }: Props) {
       setPiutang(p); 
       setKasbon(k);
 
-      // ✅ Otomatis isi uang fisik jika belum diubah manual
       if (!isAutoFilled) {
         setFisik(t + k);
         setIsAutoFilled(true);

@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { io } from "socket.io-client";
 import { toast } from "sonner";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
-import { api, tokens } from "@/lib/api"; // ✅ Import tokens
+import { api, tokens } from "@/lib/api"; 
 import { ME_KEY } from "@/auth/hooks/useAuth";
 
 export function useSocketNotifications() {
@@ -15,13 +15,12 @@ export function useSocketNotifications() {
   useEffect(() => {
     if (!me?.id) return;
 
-    // Ambil access token dari localStorage
+    
     const token = tokens.access();
 
     const socket = io("http://localhost:53103/notifications", {
       transports: ["websocket"],
       reconnection: true,
-      // ✅ KIRIM TOKEN, BUKAN userId
       auth: { token }, 
     });
 

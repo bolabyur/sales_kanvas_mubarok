@@ -45,13 +45,11 @@ export function BatchDetailModal({ open, onOpenChange, batch }: Props) {
     });
   };
 
-  // Ambil data mutasi dan total
   const mutasiList = (displayBatch as any).mutasiBatches || [];
   const totalMutasi = (displayBatch as any).totalMutasi || mutasiList.length;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      {/* PERBAIKAN: max-h-[90vh] dan flex-col agar form & tabel punya area sendiri-sendiri */}
       <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
         
         {/* Header - Fixed */}

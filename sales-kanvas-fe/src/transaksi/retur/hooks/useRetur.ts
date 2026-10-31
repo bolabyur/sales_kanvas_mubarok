@@ -31,7 +31,6 @@ export function useCreateRetur() {
   });
 }
 
-// === TAMBAHAN BARU: Hook Approve Retur ===
 export function useApproveRetur() {
   const qc = useQueryClient();
   return useMutation({
@@ -43,8 +42,8 @@ export function useApproveRetur() {
     onSuccess: () => {
       toast.success("Retur berhasil disetujui! Piutang telah dipotong.");
       qc.invalidateQueries({ queryKey: KEY });
-      qc.invalidateQueries({ queryKey: ["transaksi", "invoice"] }); // Refresh data Invoice
-      qc.invalidateQueries({ queryKey: ["master", "batch"] }); // Refresh data Batch
+      qc.invalidateQueries({ queryKey: ["transaksi", "invoice"] }); 
+      qc.invalidateQueries({ queryKey: ["master", "batch"] }); 
     },
     onError: (err: any) => {
       const msg = err.response?.data?.message || err.message;

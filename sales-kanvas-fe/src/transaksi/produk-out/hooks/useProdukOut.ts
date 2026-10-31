@@ -25,7 +25,7 @@ export function useCreateProdukOut() {
       toast.success("Onloading berhasil diproses!");
       queryClient.invalidateQueries({ queryKey: ["produk-out"] });
       queryClient.invalidateQueries({ queryKey: ["kasbon-produk"] });
-      queryClient.invalidateQueries({ queryKey: ["batch"] }); // PENTING: Refresh stok
+      queryClient.invalidateQueries({ queryKey: ["batch"] }); 
     },
     onError: (error: any) => {
       const msg = error.response?.data?.message || error.message;

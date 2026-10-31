@@ -15,33 +15,28 @@ import { PlanForm } from "./plan-form";
 import { PlanStatusBadge } from "./plan-status-badge";
 
 export function PlanPage() {
-  // State untuk Server-Side Pagination
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 10,
   });
   
-  // State untuk Search dengan Debounce (Delay 500ms)
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchTerm);
-      // Kembali ke halaman 1 setiap kali pencarian berubah
       setPagination(prev => ({ ...prev, pageIndex: 0 }));
     }, 500);
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  // Panggil Hook dengan parameter (Server-Side)
   const { data: response, isLoading, isError } = usePlans(
     pagination.pageIndex + 1, 
     pagination.pageSize, 
     debouncedSearch
   );
   
-  // PERBAIKAN: Ambil items dan total data
   const plans = response?.items || []; 
   const totalData = response?.meta?.total || 0;
   
@@ -144,11 +139,10 @@ export function PlanPage() {
         isLoading={isLoading}
         isError={isError}
         
-        // PERBAIKAN: Gunakan prop 'server' sesuai dengan tipe data di komponen DataTable Anda
         server={{
           pagination: pagination,
           onPaginationChange: setPagination,
-          rowCount: totalData, // Total keseluruhan baris dari database
+          rowCount: totalData, 
         }}
 
         toolbar={

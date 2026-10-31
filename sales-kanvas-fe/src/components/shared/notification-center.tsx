@@ -17,7 +17,7 @@ export function NotificationCenter() {
   const { data: notifications = [] } = useQuery({
     queryKey: ["notifications"],
     queryFn: () => api<any[]>("/notifications"),
-    refetchInterval: 30000, // Fallback polling
+    refetchInterval: 30000, 
   });
 
   const markRead = useMutation({

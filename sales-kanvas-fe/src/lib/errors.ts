@@ -1,13 +1,10 @@
-// HAPUS BARIS IMPORT ApiError DI SINI KARENA TIDAK DIPAKAI
 
 export function errorMessage(e: any): string {
   if (!e) return "Terjadi kesalahan yang tidak diketahui";
   
-  // Ambil pesan error dari berbagai kemungkinan bentuk
   let msg = e.message || e;
   if (typeof msg === "object" && msg.message) msg = msg.message;
 
-  // Jika Array (Zod Error)
   if (Array.isArray(msg)) {
     return msg.map((m: any) => m.message || String(m)).join(", ");
   }
