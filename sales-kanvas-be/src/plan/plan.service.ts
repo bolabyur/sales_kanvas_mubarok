@@ -113,8 +113,8 @@ export class PlanService {
           salesKanvasPersonil: { include: { employee: true } },
           salesKanvasPlanDetail: { include: { product: true } },
           salesKanvasKasbonMaterial: true,
-          invoiceOutlets: { where: { is_deleted: false }, select: { id: true } },
-          kasbonProduks: { where: { is_deleted: false }, select: { id: true } }  
+          invoiceOutlets: { where: { status: { not: "BATAL" } }, select: { id: true } },
+          kasbonProduks: { where: { status: { not: "BATAL" } }, select: { id: true } }  
         },
       }),
       this.prisma.salesKanvasPlan.count({ where }),
@@ -191,11 +191,24 @@ export class PlanService {
 
     if (data.status === PLAN_STATUS.BATAL) {
       const result = await this.prisma.$transaction(async (tx) => {
-        const produkOutAktif = await tx.produkOut.count({ where: { is_deleted: false, kasbonProduk: { sales_kanvas_plan_id: id } } });
-        if (produkOutAktif > 0) throw new BadRequestException("Barang sudah dikeluarkan. Batalkan ProdukOut terlebih dahulu.");
+        // ✅ Cek status ProdukOut (Pengeluaran Barang)
+        const produkOutAktif = await tx.produkOut.count({
+          where: {
+            kasbonProduk: { sales_kanvas_plan_id: id },
+            status: { in: ["PROSES", "DISETUJUI", "SELESAI"] } 
+          }
+        });
 
+        if (produkOutAktif > 0) {
+          throw new BadRequestException("Barang sudah dikeluarkan dan sedang diproses. Batalkan Invoice Pengeluaran (ProdukOut) terlebih dahulu.");
+        }
+
+        // Update BON yang belum diproses menjadi BATAL
         await tx.kasbonProduk.updateMany({
-          where: { sales_kanvas_plan_id: id, status: { in: ["PENDING", "DRAFT"] }, is_deleted: false },
+          where: {
+            sales_kanvas_plan_id: id,
+            status: { in: ["PENDING", "DRAFT"] },
+          },
           data: { status: "BATAL" },
         });
 

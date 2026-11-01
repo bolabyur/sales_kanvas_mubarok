@@ -78,7 +78,7 @@ export class InvoiceService {
             where: {
               produkOut: {
                 kasbonProduk: { sales_kanvas_plan_id: plan.id },
-                is_deleted: false,
+                status: { not: "BATAL" }, 
               },
               produk_id: item.produk_id,
             },
@@ -89,7 +89,7 @@ export class InvoiceService {
             where: {
               invoiceOutlet: {
                 sales_kanvas_plan_id: plan.id,
-                is_deleted: false,
+                status: { not: "BATAL" }, 
               },
               produk_id: item.produk_id,
             },
@@ -155,6 +155,7 @@ export class InvoiceService {
             tipe_pembayaran: data.tipe_pembayaran,
             total_tagihan,
             tgl_invoice: new Date(data.tgl_invoice),
+            status: "DRAFT", 
           },
         });
 
@@ -220,9 +221,9 @@ export class InvoiceService {
     return invoice.invoice;
   }
 
-    async findAll() {
+  async findAll() {
     return this.prisma.invoiceOutlet.findMany({
-      where: { is_deleted: false },
+      where: { status: { not: "BATAL" } }, 
       include: {
         outlet: true,
         salesKanvasPlan: true,
@@ -246,7 +247,7 @@ export class InvoiceService {
       },
     });
     
-    if (!invoice) throw new NotFoundException("Invoice tidak ditemukan");
+    if (!invoice || invoice.status === "BATAL") throw new NotFoundException("Invoice tidak ditemukan"); 
 
     const roleName = user.role.name.toLowerCase();
     const isGlobalRole = [
@@ -266,7 +267,7 @@ export class InvoiceService {
   async cancel(id: number, user: AuthenticatedUser) {
     const result = await this.prisma.$transaction(async (tx) => {
       const invoice = await tx.invoiceOutlet.findUnique({
-        where: { id, is_deleted: false },
+        where: { id, status: { not: "BATAL" } }, 
         include: { kartuPiutangOutlet: true, pembayaranInvoices: true },
       });
 
@@ -278,7 +279,7 @@ export class InvoiceService {
 
       await tx.invoiceOutlet.update({
         where: { id },
-        data: { is_deleted: true },
+        data: { status: "BATAL" },
       });
 
       if (invoice.kartuPiutangOutlet) {

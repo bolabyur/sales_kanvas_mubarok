@@ -35,7 +35,6 @@ import { ResponseInterceptor } from './common/interceptors/response.interceptor'
 import { IdempotencyInterceptor } from './common/interceptors/idempotency.interceptor'; 
 import { AuditLogModule } from './audit-log/audit-log.module';
 import { NotificationsModule } from './notifications/notifications.module';
-import { SearchModule } from './search/search.module';
 import { EventEmitterModule } from '@nestjs/event-emitter'
 
 @Module({
@@ -75,7 +74,6 @@ import { EventEmitterModule } from '@nestjs/event-emitter'
     ProdukDestructionModule,
     SummaryModule,
     AuditLogModule,
-    SearchModule,
     NotificationsModule
   ],
   providers: [

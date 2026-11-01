@@ -22,7 +22,8 @@ export class KasbonProdukService {
         const plan = await tx.salesKanvasPlan.findUnique({
           where: { id: data.sales_kanvas_plan_id },
         });
-        if (!plan) throw new NotFoundException("Rencana Kanvas tidak ditemukan");
+        if (!plan)
+          throw new NotFoundException("Rencana Kanvas tidak ditemukan");
         if (plan.status !== "DISETUJUI") {
           throw new BadRequestException(
             "BON hanya bisa dibuat jika Rencana Kanvas sudah disetujui.",
@@ -30,7 +31,10 @@ export class KasbonProdukService {
         }
 
         const existingKasbon = await tx.kasbonProduk.findFirst({
-          where: { sales_kanvas_plan_id: data.sales_kanvas_plan_id, is_deleted: false },
+          where: {
+            sales_kanvas_plan_id: data.sales_kanvas_plan_id,
+            status: { not: "BATAL" },
+          },
         });
         if (existingKasbon) {
           throw new BadRequestException(
@@ -79,7 +83,10 @@ export class KasbonProdukService {
         }
 
         if (data.operasional && data.operasional.length > 0) {
-          const totalNominal = data.operasional.reduce((sum, item) => sum + item.nominal, 0);
+          const totalNominal = data.operasional.reduce(
+            (sum, item) => sum + item.nominal,
+            0,
+          );
           const bonOperasional = await tx.kasbonOperasional.create({
             data: {
               sales_kanvas_plan_id: data.sales_kanvas_plan_id,
@@ -128,12 +135,12 @@ export class KasbonProdukService {
 
   async findOne(id: number, user: AuthenticatedUser) {
     const bon = await this.prisma.kasbonProduk.findUnique({
-      where: { id, is_deleted: false },
+      where: { id, status: { not: "BATAL" } },
       include: {
         salesKanvasPlan: true,
         detailKasbonProduks: { include: { produk: true, batch: true } },
         produkOuts: {
-          where: { is_deleted: false },
+          where: { status: { not: "BATAL" } },
           include: { detailProdukOuts: { include: { batch: true } } },
         },
       },
@@ -141,7 +148,12 @@ export class KasbonProdukService {
     if (!bon) throw new NotFoundException("BON tidak ditemukan");
 
     const roleName = user.role.name.toLowerCase();
-    const isGlobalRole = ["superadmin", "super admin", "kasir", "supervisor"].includes(roleName);
+    const isGlobalRole = [
+      "superadmin",
+      "super admin",
+      "kasir",
+      "supervisor",
+    ].includes(roleName);
 
     if (!isGlobalRole && roleName.includes("sales")) {
       if (bon.salesKanvasPlan?.user_id !== user.id) {
@@ -162,7 +174,7 @@ export class KasbonProdukService {
       }
 
       const produkOutAktif = await this.prisma.produkOut.count({
-        where: { kasbon_produk_id: id, is_deleted: false },
+        where: { kasbon_produk_id: id, status: { not: "BATAL" } },
       });
       if (produkOutAktif > 0) {
         throw new BadRequestException(
@@ -178,7 +190,9 @@ export class KasbonProdukService {
     }
 
     if (bon.status === "BATAL") {
-      throw new BadRequestException("BON sudah dibatalkan, status tidak bisa diubah.");
+      throw new BadRequestException(
+        "BON sudah dibatalkan, status tidak bisa diubah.",
+      );
     }
     if (bon.status === "ONLOADING") {
       throw new BadRequestException(
@@ -194,14 +208,14 @@ export class KasbonProdukService {
 
   async findAll() {
     return this.prisma.kasbonProduk.findMany({
-      where: { is_deleted: false },
+      where: { status: { not: "BATAL" } },
       include: {
         salesKanvasPlan: {
           include: {
             salesKanvasPersonil: {
-              include: { employee: true }
-            }
-          }
+              include: { employee: true },
+            },
+          },
         },
         detailKasbonProduks: { include: { produk: true, batch: true } },
       },

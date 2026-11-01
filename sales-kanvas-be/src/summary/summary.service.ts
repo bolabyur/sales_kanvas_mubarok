@@ -12,44 +12,44 @@ export class SummaryService {
     const dateFilter = { gte: start, lte: end };
 
     const invoices = await this.prisma.invoiceOutlet.aggregate({
-      where: { tgl_invoice: dateFilter, is_deleted: false },
+      where: { tgl_invoice: dateFilter, status: { not: "BATAL" } }, 
       _sum: { total_tagihan: true },
       _count: { id: true },
     });
 
     const salesByType = await this.prisma.invoiceOutlet.groupBy({
       by: ['tipe_pembayaran'],
-      where: { tgl_invoice: dateFilter, is_deleted: false },
+      where: { tgl_invoice: dateFilter, status: { not: "BATAL" } }, 
       _sum: { total_tagihan: true },
     });
 
     const returns = await this.prisma.invoiceReturProduk.aggregate({
-      where: { updated_at: dateFilter, is_deleted: false },
+      where: { updated_at: dateFilter, status: { not: "BATAL" } },
       _sum: { total_nilai_retur: true },
       _count: { id: true },
     });
 
     const kasbons = await this.prisma.kasbonOperasional.aggregate({
-      where: { updated_at: dateFilter, is_deleted: false },
+      where: { updated_at: dateFilter, status: { not: "BATAL" } }, 
       _sum: { nominal_kasbon: true },
     });
 
     const piutangs = await this.prisma.kartuPiutangOutlet.aggregate({
       where: {
-        invoiceOutlet: { tgl_invoice: dateFilter, is_deleted: false },
+        invoiceOutlet: { tgl_invoice: dateFilter, status: { not: "BATAL" } }, 
         is_deleted: false,
       },
       _sum: { sisa_piutang: true },
     });
 
-    const totalBruto = invoices._sum.total_tagihan?.toNumber() || 0;
-    const totalRetur = returns._sum.total_nilai_retur?.toNumber() || 0;
-    const totalKasbon = kasbons._sum.nominal_kasbon?.toNumber() || 0;
-    const totalPiutang = piutangs._sum.sisa_piutang?.toNumber() || 0;
+    const totalBruto = invoices._sum?.total_tagihan?.toNumber() || 0; 
+    const totalRetur = returns._sum?.total_nilai_retur?.toNumber() || 0; 
+    const totalKasbon = kasbons._sum?.nominal_kasbon?.toNumber() || 0; 
+    const totalPiutang = piutangs._sum?.sisa_piutang?.toNumber() || 0; 
 
     return {
       periode: { start, end },
-      total_invoice: invoices._count.id,
+      total_invoice: invoices._count?.id || 0, 
       penjualan_bruto: totalBruto,
       total_retur: totalRetur,
       penjualan_neto: totalBruto - totalRetur,
@@ -57,7 +57,7 @@ export class SummaryService {
       total_piutang: totalPiutang,
       rincian_pembayaran: salesByType.map((item) => ({
         tipe: item.tipe_pembayaran,
-        total: item._sum.total_tagihan?.toNumber() || 0,
+        total: item._sum?.total_tagihan?.toNumber() || 0, 
       })),
     };
   }
@@ -79,7 +79,7 @@ export class SummaryService {
       JOIN ms_market_area ma ON skp.market_area_id = ma.id
       WHERE io.tgl_invoice >= ${start} 
         AND io.tgl_invoice <= ${end}
-        AND io.is_deleted = false
+        AND io.status != 'BATAL'  
       GROUP BY ma.id, ma.name
       ORDER BY total_penjualan DESC
     `;
@@ -93,7 +93,7 @@ export class SummaryService {
 
   async getSummaryRekonsiliasi(status?: string) {
     const piutangs = await this.prisma.kartuPiutangOutlet.findMany({
-      where: { sisa_piutang: { gt: 0 }, is_deleted: false },
+      where: { sisa_piutang: { gt: 0 }, is_deleted: false }, 
       include: {
         invoiceOutlet: {
           include: {

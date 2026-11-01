@@ -26,8 +26,8 @@ export class ReturService {
 
         if (data.invoice_outlet_id) {
           const invoice = await tx.invoiceOutlet.findUnique({
-            where: { id: data.invoice_outlet_id, is_deleted: false },
-            include: { outlet: true, salesKanvasPlan: true },
+            where: { id: data.invoice_outlet_id, status: { not: "BATAL" } }, 
+            include: { outlet: true, salesKanvasPlan: true }, 
           });
           if (!invoice)
             throw new NotFoundException(
@@ -80,8 +80,7 @@ export class ReturService {
                 where: {
                   invoiceReturProduk: {
                     invoice_outlet_id: data.invoice_outlet_id,
-                    is_deleted: false,
-                    status: "APPROVED",
+                    status: "APPROVED", 
                   },
                   produk_id: item.produk_id,
                 },
@@ -145,7 +144,7 @@ export class ReturService {
           where: { id },
           include: {
             detailInvoiceReturs: true,
-            invoiceOutlet: { include: { salesKanvasPlan: true } },
+            invoiceOutlet: { include: { salesKanvasPlan: true } }, 
           },
         });
 
@@ -216,7 +215,7 @@ export class ReturService {
 
   async findAll() {
     return this.prisma.invoiceReturProduk.findMany({
-      where: { is_deleted: false },
+      where: { status: { not: "BATAL" } },
       include: {
         outlet: true,
         gudangRetur: true,

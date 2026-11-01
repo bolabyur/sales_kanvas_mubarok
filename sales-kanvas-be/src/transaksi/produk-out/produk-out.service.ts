@@ -52,7 +52,7 @@ export class ProdukOutService {
           include: { detailKasbonProduks: true },
         });
 
-        if (!bon || bon.is_deleted) throw new NotFoundException('BON Kasbon Produk tidak ditemukan');
+        if (!bon || bon.status === "BATAL") throw new NotFoundException('BON Kasbon Produk tidak ditemukan');
         if (bon.status === 'ONLOADING' || bon.status === 'Loaded') throw new BadRequestException('BON ini sudah Onloading');
         if (bon.status === 'BATAL') throw new BadRequestException('BON sudah dibatalkan');
         if (bon.detailKasbonProduks.length === 0) throw new BadRequestException('BON ini tidak memiliki detail barang');
@@ -68,6 +68,7 @@ export class ProdukOutService {
             source_type: data.source_type,
             user_id: userId,
             ip,
+            status: "PROSES", 
           },
         });
 
@@ -148,7 +149,7 @@ export class ProdukOutService {
     return this.prisma.$transaction(
       async (tx) => {
         const produkOut = await tx.produkOut.findUnique({
-          where: { id, is_deleted: false },
+          where: { id, status: { not: "BATAL" } }, 
           include: { detailProdukOuts: true },
         });
         if (!produkOut) throw new NotFoundException('ProdukOut tidak ditemukan atau sudah dibatalkan');
@@ -170,7 +171,7 @@ export class ProdukOutService {
 
         await tx.produkOut.update({
           where: { id },
-          data: { is_deleted: true },
+          data: { status: "BATAL" }, 
         });
 
         await tx.kasbonProduk.update({
@@ -197,7 +198,7 @@ export class ProdukOutService {
 
   async findAll() {
     return this.prisma.produkOut.findMany({
-      where: { is_deleted: false },
+      where: { status: { not: "BATAL" } }, 
       include: {
         kasbonProduk: { 
           include: { 
