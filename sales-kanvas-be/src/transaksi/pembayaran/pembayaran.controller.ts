@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, UseInterceptors, Headers } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { PembayaranService } from './pembayaran.service';
 import { CreatePembayaranDto } from './dto/pembayaran.dto';
@@ -11,7 +11,6 @@ import { IdempotencyInterceptor } from 'src/common/interceptors/idempotency.inte
 
 @ApiTags('Transaksi - Pembayaran')
 @ApiBearerAuth('access-token')
-
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('transaksi/pembayaran')
 export class PembayaranController {
@@ -23,8 +22,9 @@ export class PembayaranController {
   create(
     @Body() dto: CreatePembayaranDto,
     @CurrentUser() user: AuthenticatedUser,
+    @Headers('x-idempotency-key') idempotencyKey?: string,
   ) {
-    return this.pembayaranService.create(dto, user);
+    return this.pembayaranService.create(dto, user, idempotencyKey);
   }
 
   @Get()

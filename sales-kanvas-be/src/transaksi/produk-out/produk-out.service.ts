@@ -1,17 +1,18 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateProdukOutDto } from './dto/produk-out.dto';
 import { AuditLogService } from 'src/audit-log/audit-log.service';
-import { EventEmitter2 } from '@nestjs/event-emitter'; 
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { LoadingCompletedEvent } from './events/loading-completed.event';
+import { hashPayload, validateReplayPayload } from '../../common/utils/idempotency.util';
 
 @Injectable()
 export class ProdukOutService {
   constructor(
     private prisma: PrismaService,
     private auditLog: AuditLogService,
-    private eventEmitter: EventEmitter2, 
-  ) {}
+    private eventEmitter: EventEmitter2,
+  ) { }
 
   private async allocateFefo(tx: any, produk_id: number, qty: number): Promise<Array<{ batch_id: number; qty: number; no_batch: string }>> {
     const startOfToday = new Date();
@@ -44,112 +45,139 @@ export class ProdukOutService {
     return allocs;
   }
 
-  async create(data: CreateProdukOutDto, userId: number, ip: string) {
-    const result = await this.prisma.$transaction(
-      async (tx) => {
-        const bon = await tx.kasbonProduk.findUnique({
-          where: { id: data.kasbon_produk_id },
-          include: { detailKasbonProduks: true },
-        });
+  async create(data: CreateProdukOutDto, userId: number, ip: string, idempotencyKey?: string) {
+    const payloadHash = hashPayload(data);
+    const maxRetries = 3;
+    let attempt = 0;
 
-        if (!bon || bon.status === "BATAL") throw new NotFoundException('BON Kasbon Produk tidak ditemukan');
-        if (bon.status === 'ONLOADING' || bon.status === 'Loaded') throw new BadRequestException('BON ini sudah Onloading');
-        if (bon.status === 'BATAL') throw new BadRequestException('BON sudah dibatalkan');
-        if (bon.detailKasbonProduks.length === 0) throw new BadRequestException('BON ini tidak memiliki detail barang');
-
-        const gudang = await tx.gudang.findUnique({ where: { id: data.gudang_id } });
-        if (!gudang || gudang.is_deleted) throw new NotFoundException('Gudang ID tidak ditemukan');
-
-        const produkOut = await tx.produkOut.create({
-          data: {
-            kasbon_produk_id: data.kasbon_produk_id,
-            gudang_id: data.gudang_id,
-            tgl_keluar: new Date(data.tgl_keluar),
-            source_type: data.source_type,
-            user_id: userId,
-            ip,
-            status: "PROSES", 
-          },
-        });
-
-        for (const item of bon.detailKasbonProduks) {
-          const allocations = await this.allocateFefo(tx, item.produk_id, item.qty_bawa);
-
-          for (const alloc of allocations) {
-            const res = await tx.batch.updateMany({
-              where: { id: alloc.batch_id, is_deleted: false, stok_gudang: { gte: alloc.qty } },
-              data: { stok_gudang: { decrement: alloc.qty } },
+    while (attempt < maxRetries) {
+      try {
+        const result = await this.prisma.$transaction(
+          async (tx) => {
+            const bon = await tx.kasbonProduk.findUnique({
+              where: { id: data.kasbon_produk_id },
+              include: { detailKasbonProduks: true },
             });
 
-            if (res.count === 0) {
-              throw new BadRequestException(`Stok batch ${alloc.no_batch} mendadak tidak mencukupi. Coba ulangi.`);
+            if (!bon || bon.status === "BATAL") throw new NotFoundException('BON Kasbon Produk tidak ditemukan');
+            if (bon.status === 'ONLOADING' || bon.status === 'Loaded') throw new BadRequestException('BON ini sudah Onloading');
+            if (bon.status === 'BATAL') throw new BadRequestException('BON sudah dibatalkan');
+            if (bon.detailKasbonProduks.length === 0) throw new BadRequestException('BON ini tidak memiliki detail barang');
+
+            const gudang = await tx.gudang.findUnique({ where: { id: data.gudang_id } });
+            if (!gudang || gudang.is_deleted) throw new NotFoundException('Gudang ID tidak ditemukan');
+
+            const produkOut = await tx.produkOut.create({
+              data: {
+                kasbon_produk_id: data.kasbon_produk_id,
+                gudang_id: data.gudang_id,
+                tgl_keluar: new Date(data.tgl_keluar),
+                source_type: data.source_type,
+                user_id: userId,
+                ip,
+                status: "PROSES",
+                idempotency_key: idempotencyKey,
+                payload_hash: payloadHash,
+              },
+            });
+
+            for (const item of bon.detailKasbonProduks) {
+              const allocations = await this.allocateFefo(tx, item.produk_id, item.qty_bawa);
+
+              for (const alloc of allocations) {
+                const res = await tx.batch.updateMany({
+                  where: { id: alloc.batch_id, is_deleted: false, stok_gudang: { gte: alloc.qty } },
+                  data: { stok_gudang: { decrement: alloc.qty } },
+                });
+
+                if (res.count === 0) {
+                  throw new BadRequestException(`Stok batch ${alloc.no_batch} mendadak tidak mencukupi. Coba ulangi.`);
+                }
+
+                await tx.detailProdukOut.create({
+                  data: {
+                    produk_out_id: produkOut.id,
+                    produk_id: item.produk_id,
+                    batch_id: alloc.batch_id,
+                    qty: alloc.qty,
+                  },
+                });
+
+                await tx.mutasiBatch.create({
+                  data: {
+                    batch_id: alloc.batch_id,
+                    tipe_mutasi: 'OUT',
+                    qty: alloc.qty,
+                    keterangan: `Onloading BON #${bon.id} (FEFO Auto)`,
+                  },
+                });
+              }
             }
 
-            await tx.detailProdukOut.create({
-              data: {
-                produk_out_id: produkOut.id,
-                produk_id: item.produk_id,
-                batch_id: alloc.batch_id,
-                qty: alloc.qty,
-              },
+            await tx.kasbonProduk.update({
+              where: { id: bon.id },
+              data: { status: 'ONLOADING' },
             });
 
-            await tx.mutasiBatch.create({
-              data: {
-                batch_id: alloc.batch_id,
-                tipe_mutasi: 'OUT',
-                qty: alloc.qty,
-                keterangan: `Onloading BON #${bon.id} (FEFO Auto)`,
+            await this.auditLog.log(
+              {
+                user_id: userId,
+                action: 'CREATE_ONLOADING',
+                entity: 'ProdukOut',
+                entity_id: produkOut.id,
+                new_values: { bon_id: bon.id, source_type: data.source_type, fefo_applied: true },
               },
-            });
+              tx,
+            );
+
+            return { produkOut, salesUserId: bon.user_id, totalItems: bon.detailKasbonProduks.length };
+          },
+          { isolationLevel: 'Serializable' },
+        );
+
+        const actor = await this.prisma.user.findUnique({ where: { id: userId } });
+        this.eventEmitter.emit(
+          "loading.completed",
+          new LoadingCompletedEvent(
+            result.produkOut.kasbon_produk_id,
+            result.salesUserId,
+            result.totalItems,
+            userId,
+            actor?.name || "Admin Gudang",
+          ),
+        );
+
+        return result.produkOut;
+      } catch (error: any) {
+        if (idempotencyKey) {
+          const existing = await this.prisma.produkOut.findUnique({
+            where: { idempotency_key: idempotencyKey },
+            include: { detailProdukOuts: true },
+          });
+          if (existing) {
+            validateReplayPayload(existing.payload_hash, payloadHash);
+            return existing;
           }
         }
 
-        await tx.kasbonProduk.update({
-          where: { id: bon.id },
-          data: { status: 'ONLOADING' },
-        });
-
-        await this.auditLog.log(
-          {
-            user_id: userId,
-            action: 'CREATE_ONLOADING',
-            entity: 'ProdukOut',
-            entity_id: produkOut.id,
-            new_values: { bon_id: bon.id, source_type: data.source_type, fefo_applied: true },
-          },
-          tx,
-        );
-
-        return { 
-          produkOut, 
-          salesUserId: bon.user_id, 
-          totalItems: bon.detailKasbonProduks.length 
-        };
-      },
-      { isolationLevel: 'Serializable' },
-    );
-
-    const actor = await this.prisma.user.findUnique({ where: { id: userId } });
-    this.eventEmitter.emit(
-      "loading.completed",
-      new LoadingCompletedEvent(
-        result.produkOut.kasbon_produk_id,
-        result.salesUserId,
-        result.totalItems,
-        userId,
-        actor?.name || "Admin Gudang",
-      ),
-    );
-
-    return result.produkOut;
+        if (error.code === 'P2034') {
+          attempt++;
+          if (attempt >= maxRetries) {
+            throw new ServiceUnavailableException("Sistem sedang sibuk (Database Conflict), silakan coba beberapa saat lagi.");
+          }
+          await new Promise((resolve) => setTimeout(resolve, 100 * attempt));
+          continue;
+        }
+        throw error;
+      }
+    }
   }
 
   async cancel(id: number, userId: number, ip: string) {
     return this.prisma.$transaction(
       async (tx) => {
         const produkOut = await tx.produkOut.findUnique({
-          where: { id, status: { not: "BATAL" } }, 
+          where: { id, status: { not: "BATAL" } },
           include: { detailProdukOuts: true },
         });
         if (!produkOut) throw new NotFoundException('ProdukOut tidak ditemukan atau sudah dibatalkan');
@@ -171,7 +199,7 @@ export class ProdukOutService {
 
         await tx.produkOut.update({
           where: { id },
-          data: { status: "BATAL" }, 
+          data: { status: "BATAL" },
         });
 
         await tx.kasbonProduk.update({
@@ -198,14 +226,14 @@ export class ProdukOutService {
 
   async findAll() {
     return this.prisma.produkOut.findMany({
-      where: { status: { not: "BATAL" } }, 
+      where: { status: { not: "BATAL" } },
       include: {
-        kasbonProduk: { 
-          include: { 
+        kasbonProduk: {
+          include: {
             salesKanvasPlan: {
               include: { salesKanvasPersonil: { include: { employee: true } } }
-            } 
-          } 
+            }
+          }
         },
         detailProdukOuts: { include: { produk: true, batch: true } },
       },

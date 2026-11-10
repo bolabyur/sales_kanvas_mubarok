@@ -2,12 +2,14 @@ import {
   Injectable,
   BadRequestException,
   NotFoundException,
+  ServiceUnavailableException,
 } from "@nestjs/common";
 import { PrismaService } from "../../prisma/prisma.service";
 import { CreateKasbonProdukDto } from "./dto/kasbon-produk.dto";
 import { AuthenticatedUser } from "../../common/interfaces/authenticated-user.interface";
 import { EventEmitter2 } from "@nestjs/event-emitter";
 import { BonCreatedEvent } from "./events/bon-created.event";
+import { hashPayload, isIdempotencyError, validateReplayPayload } from "../../common/utils/idempotency.util";
 
 @Injectable()
 export class KasbonProdukService {
@@ -16,121 +18,157 @@ export class KasbonProdukService {
     private eventEmitter: EventEmitter2,
   ) {}
 
-  async create(data: CreateKasbonProdukDto, userId: number, ip: string) {
-    const result = await this.prisma.$transaction(
-      async (tx) => {
-        const plan = await tx.salesKanvasPlan.findUnique({
-          where: { id: data.sales_kanvas_plan_id },
-        });
-        if (!plan)
-          throw new NotFoundException("Rencana Kanvas tidak ditemukan");
-        if (plan.status !== "DISETUJUI") {
-          throw new BadRequestException(
-            "BON hanya bisa dibuat jika Rencana Kanvas sudah disetujui.",
-          );
-        }
+  async create(data: CreateKasbonProdukDto, userId: number, ip: string, idempotencyKey?: string) {
+    const payloadHash = hashPayload(data);
+    const maxRetries = 3;
+    let attempt = 0;
 
-        const existingKasbon = await tx.kasbonProduk.findFirst({
-          where: {
-            sales_kanvas_plan_id: data.sales_kanvas_plan_id,
-            status: { not: "BATAL" },
-          },
-        });
-        if (existingKasbon) {
-          throw new BadRequestException(
-            "Kasbon untuk Plan ini sudah dibuat. Tidak boleh membuat dua kali.",
-          );
-        }
+    while (attempt < maxRetries) {
+      try {
+        const result = await this.prisma.$transaction(
+          async (tx) => {
+            const plan = await tx.salesKanvasPlan.findUnique({
+              where: { id: data.sales_kanvas_plan_id },
+            });
+            if (!plan)
+              throw new NotFoundException("Rencana Kanvas tidak ditemukan");
+            if (plan.status !== "DISETUJUI") {
+              throw new BadRequestException(
+                "BON hanya bisa dibuat jika Rencana Kanvas sudah disetujui.",
+              );
+            }
 
-        const startOfToday = new Date();
-        startOfToday.setHours(0, 0, 0, 0);
-
-        for (const item of data.details) {
-          const agg = await tx.batch.aggregate({
-            where: {
-              produk_id: item.produk_id,
-              is_deleted: false,
-              expired_date: { gte: startOfToday },
-            },
-            _sum: { stok_gudang: true },
-          });
-          const stok = agg._sum.stok_gudang ?? 0;
-          if (stok < item.qty_bawa) {
-            throw new BadRequestException(
-              `Stok total produk ID ${item.produk_id} tidak cukup. Tersedia: ${stok}, diminta: ${item.qty_bawa}.`,
-            );
-          }
-        }
-
-        const bonProduk = await tx.kasbonProduk.create({
-          data: {
-            sales_kanvas_plan_id: data.sales_kanvas_plan_id,
-            status: "DRAFT",
-            user_id: userId,
-            ip,
-          },
-        });
-
-        for (const item of data.details) {
-          await tx.detailKasbonProduk.create({
-            data: {
-              kasbon_produk_id: bonProduk.id,
-              produk_id: item.produk_id,
-              qty_bawa: item.qty_bawa,
-              batch_id: null,
-            },
-          });
-        }
-
-        if (data.operasional && data.operasional.length > 0) {
-          const totalNominal = data.operasional.reduce(
-            (sum, item) => sum + item.nominal,
-            0,
-          );
-          const bonOperasional = await tx.kasbonOperasional.create({
-            data: {
-              sales_kanvas_plan_id: data.sales_kanvas_plan_id,
-              nominal_kasbon: totalNominal,
-              status: "DRAFT",
-              user_id: userId,
-              ip,
-            },
-          });
-
-          for (const op of data.operasional) {
-            await tx.detailKasbonOperasional.create({
-              data: {
-                kasbon_operasional_id: bonOperasional.id,
-                nama_pengeluaran: op.nama_pengeluaran,
-                nominal: op.nominal,
-                foto_bukti: op.foto_bukti,
+            const existingKasbon = await tx.kasbonProduk.findFirst({
+              where: {
+                sales_kanvas_plan_id: data.sales_kanvas_plan_id,
+                status: { not: "BATAL" },
               },
             });
+            if (existingKasbon) {
+              throw new BadRequestException(
+                "Kasbon untuk Plan ini sudah dibuat. Tidak boleh membuat dua kali.",
+              );
+            }
+
+            const startOfToday = new Date();
+            startOfToday.setHours(0, 0, 0, 0);
+
+            for (const item of data.details) {
+              const agg = await tx.batch.aggregate({
+                where: {
+                  produk_id: item.produk_id,
+                  is_deleted: false,
+                  expired_date: { gte: startOfToday },
+                },
+                _sum: { stok_gudang: true },
+              });
+              const stok = agg._sum.stok_gudang ?? 0;
+              if (stok < item.qty_bawa) {
+                throw new BadRequestException(
+                  `Stok total produk ID ${item.produk_id} tidak cukup. Tersedia: ${stok}, diminta: ${item.qty_bawa}.`,
+                );
+              }
+            }
+
+            const bonProduk = await tx.kasbonProduk.create({
+              data: {
+                sales_kanvas_plan_id: data.sales_kanvas_plan_id,
+                status: "DRAFT",
+                user_id: userId,
+                ip,
+                idempotency_key: idempotencyKey,
+                payload_hash: payloadHash,
+              },
+            });
+
+            for (const item of data.details) {
+              await tx.detailKasbonProduk.create({
+                data: {
+                  kasbon_produk_id: bonProduk.id,
+                  produk_id: item.produk_id,
+                  qty_bawa: item.qty_bawa,
+                  batch_id: null,
+                },
+              });
+            }
+
+            if (data.operasional && data.operasional.length > 0) {
+              const totalNominal = data.operasional.reduce(
+                (sum, item) => sum + item.nominal,
+                0,
+              );
+              const bonOperasional = await tx.kasbonOperasional.create({
+                data: {
+                  sales_kanvas_plan_id: data.sales_kanvas_plan_id,
+                  nominal_kasbon: totalNominal,
+                  status: "DRAFT",
+                  user_id: userId,
+                  ip,
+                },
+              });
+
+              for (const op of data.operasional) {
+                await tx.detailKasbonOperasional.create({
+                  data: {
+                    kasbon_operasional_id: bonOperasional.id,
+                    nama_pengeluaran: op.nama_pengeluaran,
+                    nominal: op.nominal,
+                    foto_bukti: op.foto_bukti,
+                  },
+                });
+              }
+            }
+
+            const finalBon = await tx.kasbonProduk.findUnique({
+              where: { id: bonProduk.id },
+              include: { detailKasbonProduks: true },
+            });
+
+            return { bon: finalBon, planInvoice: plan.invoice };
+          },
+          { isolationLevel: "Serializable" },
+        );
+
+        const actor = await this.prisma.user.findUnique({ where: { id: userId } });
+        this.eventEmitter.emit(
+          "bon.created",
+          new BonCreatedEvent(
+            result.bon!.id,
+            result.planInvoice,
+            userId,
+            actor?.name || "Sales",
+          ),
+        );
+
+        return result.bon;
+      } catch (error: any) {
+        if (idempotencyKey) {
+          const existing = await this.prisma.kasbonProduk.findUnique({
+            where: { idempotency_key: idempotencyKey },
+            include: { detailKasbonProduks: true },
+          });
+          if (existing) {
+            if (existing.user_id !== userId) {
+              throw new NotFoundException("Transaksi tidak ditemukan");
+            }
+            
+            validateReplayPayload(existing.payload_hash, payloadHash);
+            return existing;
           }
         }
 
-        const finalBon = await tx.kasbonProduk.findUnique({
-          where: { id: bonProduk.id },
-          include: { detailKasbonProduks: true },
-        });
+        if (error.code === 'P2034') {
+          attempt++;
+          if (attempt >= maxRetries) {
+            throw new ServiceUnavailableException("Sistem sedang sibuk (Database Conflict), silakan coba beberapa saat lagi.");
+          }
+          await new Promise((resolve) => setTimeout(resolve, 100 * attempt));
+          continue; 
+        }
 
-        return { bon: finalBon, planInvoice: plan.invoice };
-      },
-      { isolationLevel: "Serializable" },
-    );
-
-    const actor = await this.prisma.user.findUnique({ where: { id: userId } });
-    this.eventEmitter.emit(
-      "bon.created",
-      new BonCreatedEvent(
-        result.bon!.id,
-        result.planInvoice,
-        userId,
-        actor?.name || "Sales",
-      ),
-    );
-
-    return result.bon;
+        throw error;
+      }
+    }
   }
 
   async findOne(id: number, user: AuthenticatedUser) {

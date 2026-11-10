@@ -81,8 +81,8 @@ import { EventEmitterModule } from '@nestjs/event-emitter'
       provide: APP_PIPE,
       useClass: ZodValidationPipe,
     },
-    { provide: APP_INTERCEPTOR, useClass: IdempotencyInterceptor },
     { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
+    { provide: APP_INTERCEPTOR, useClass: IdempotencyInterceptor },
     
     {
       provide: APP_GUARD,

@@ -1,13 +1,5 @@
 import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Param,
-  ParseIntPipe,
-  UseGuards,
-  UseInterceptors,
-  Req,
+  Controller, Get, Post, Body, Param, ParseIntPipe, UseGuards, UseInterceptors, Req, Headers
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiParam } from '@nestjs/swagger';
 import { Request } from 'express';
@@ -36,8 +28,9 @@ export class ProdukOutController {
     @Body() dto: CreateProdukOutDto,
     @CurrentUser() user: AuthenticatedUser,
     @Req() req: Request,
+    @Headers('x-idempotency-key') idempotencyKey?: string,
   ) {
-    return this.produkOutService.create(dto, user.id, req.ip ?? '127.0.0.1');
+    return this.produkOutService.create(dto, user.id, req.ip ?? '127.0.0.1', idempotencyKey);
   }
 
   @Get()
@@ -52,11 +45,7 @@ export class ProdukOutController {
   @UseInterceptors(IdempotencyInterceptor)
   @ApiOperation({
     summary: 'Batalkan Onloading — stok dikembalikan, BON kembali ke DRAFT',
-    description:
-      'Dipakai Gudang saat SPV meminta pembatalan Plan yang sudah Onloading. ' +
-      'Setelah ini, SPV dapat membatalkan Plan.',
   })
-  @ApiParam({ name: 'id', description: 'ID ProdukOut', type: Number })
   cancel(
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser() user: AuthenticatedUser,

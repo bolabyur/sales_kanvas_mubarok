@@ -1,13 +1,5 @@
 import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  UseGuards,
-  Patch,
-  Param,
-  ParseIntPipe,
-  UseInterceptors,
+  Controller, Get, Post, Body, UseGuards, Patch, Param, ParseIntPipe, UseInterceptors, Headers
 } from "@nestjs/common";
 import { ApiTags, ApiBearerAuth } from "@nestjs/swagger";
 import { KasbonProdukService } from "./kasbon-produk.service";
@@ -32,8 +24,9 @@ export class KasbonProdukController {
   create(
     @Body() dto: CreateKasbonProdukDto,
     @CurrentUser() user: AuthenticatedUser,
+    @Headers('x-idempotency-key') idempotencyKey?: string,
   ) {
-    return this.kasbonProdukService.create(dto, user.id, "127.0.0.1");
+    return this.kasbonProdukService.create(dto, user.id, "127.0.0.1", idempotencyKey);
   }
 
   @Get()
@@ -58,11 +51,6 @@ export class KasbonProdukController {
     @Body() dto: { status: string },
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.kasbonProdukService.updateStatus(
-      id,
-      dto.status,
-      user.id,
-      "127.0.0.1",
-    );
+    return this.kasbonProdukService.updateStatus(id, dto.status, user.id, "127.0.0.1");
   }
 }

@@ -400,6 +400,8 @@ model KasbonOperasional {
   is_deleted           Boolean  @default(false)
   sync_status          String   @default("Pending")
   updated_at           DateTime @updatedAt
+  idempotency_key String? @unique
+  payload_hash    String?
 
   salesKanvasPlan         SalesKanvasPlan           @relation(fields: [sales_kanvas_plan_id], references: [id])
   detailKasbonOperasional DetailKasbonOperasional[]
@@ -433,6 +435,8 @@ model KasbonProduk {
   is_deleted           Boolean  @default(false)
   sync_status          String   @default("Pending")
   updated_at           DateTime @updatedAt
+  idempotency_key String? @unique
+  payload_hash    String?
 
   salesKanvasPlan     SalesKanvasPlan      @relation(fields: [sales_kanvas_plan_id], references: [id])
   detailKasbonProduks DetailKasbonProduk[]
@@ -471,6 +475,8 @@ model ProdukOut {
   status           String   @default("DRAFT") 
   sync_status      String   @default("Pending")
   updated_at       DateTime @updatedAt
+  idempotency_key String? @unique
+  payload_hash    String?
 
   kasbonProduk     KasbonProduk      @relation(fields: [kasbon_produk_id], references: [id])
   gudang           Gudang            @relation(fields: [gudang_id], references: [id])
@@ -508,6 +514,8 @@ model InvoiceOutlet {
   status               String   @default("DRAFT")
   sync_status          String   @default("Pending")
   updated_at           DateTime @updatedAt
+  idempotency_key String? @unique
+  payload_hash    String?
 
   outlet               Outlet                @relation(fields: [outlet_id], references: [id])
   salesKanvasPlan      SalesKanvasPlan       @relation(fields: [sales_kanvas_plan_id], references: [id])
@@ -609,6 +617,8 @@ model PembayaranInvoice {
   is_deleted        Boolean  @default(false)
   sync_status       String   @default("Pending")
   updated_at        DateTime @updatedAt
+  idempotency_key String? @unique
+  payload_hash    String?
 
   invoiceOutlet InvoiceOutlet @relation(fields: [invoice_outlet_id], references: [id])
 
@@ -722,9 +732,13 @@ model KanvasReturn {
   sync_status          String   @default("Pending")
   updated_at           DateTime @updatedAt
 
+  idempotency_key      String?  @unique
+  payload_hash         String?
+
   salesKanvasPlan SalesKanvasPlan      @relation(fields: [sales_kanvas_plan_id], references: [id])
   gudangTujuan    Gudang               @relation(fields: [gudang_tujuan_id], references: [id])
   details         KanvasReturnDetail[]
+  receipts        ReturReceipt[]  
 
   @@map("kanvas_return")
 }
@@ -742,11 +756,27 @@ model KanvasReturnDetail {
   sync_status      String   @default("Pending")
   updated_at       DateTime @updatedAt
 
+  qty_diterima Int @default(0)
+
   kanvasReturn KanvasReturn @relation(fields: [kanvas_return_id], references: [id])
   batch        Batch        @relation(fields: [batch_id], references: [id])
   produk       Product      @relation(fields: [produk_id], references: [id])
 
   @@map("kanvas_return_detail")
+}
+
+model ReturReceipt {
+  id               Int      @id @default(autoincrement())
+  uuid             String   @unique @default(uuid())
+  kanvas_return_id Int
+  idempotency_key  String   @unique
+  payload_hash     String
+  user_id          Int
+  created_at       DateTime @default(now())
+
+  kanvasReturn KanvasReturn @relation(fields: [kanvas_return_id], references: [id])
+
+  @@map("retur_receipt")
 }
 
 model ProdukDestruction {
@@ -789,6 +819,7 @@ model ProdukDestructionDetail {
 model IdempotencyRecord {
   id          Int      @id @default(autoincrement())
   key         String   @unique
+  payload_hash String?
   response    Json
   status_code Int      @default(201)
   created_at  DateTime @default(now())

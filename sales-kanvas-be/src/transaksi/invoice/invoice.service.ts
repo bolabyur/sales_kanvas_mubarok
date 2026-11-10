@@ -2,228 +2,269 @@ import {
   Injectable,
   BadRequestException,
   NotFoundException,
+  ServiceUnavailableException,
 } from "@nestjs/common";
 import { PrismaService } from "../../prisma/prisma.service";
 import { CreateInvoiceDto } from "./dto/invoice.dto";
 import { AuthenticatedUser } from "../../common/interfaces/authenticated-user.interface";
 import { AuditLogService } from "../../audit-log/audit-log.service";
 import { EventEmitter2 } from "@nestjs/event-emitter";
-import { InvoiceCreatedEvent } from "./events/invoice-created.event"; 
-import { InvoiceCancelledEvent } from "./events/invoice-cancelled.event"; 
+import { InvoiceCreatedEvent } from "./events/invoice-created.event";
+import { InvoiceCancelledEvent } from "./events/invoice-cancelled.event";
+import { hashPayload, validateReplayPayload } from "../../common/utils/idempotency.util";
 
 @Injectable()
 export class InvoiceService {
   constructor(
     private prisma: PrismaService,
     private auditLog: AuditLogService,
-    private eventEmitter: EventEmitter2, 
-  ) {}
+    private eventEmitter: EventEmitter2,
+  ) { }
 
-  async create(data: CreateInvoiceDto, user: AuthenticatedUser) {
-    const invoice = await this.prisma.$transaction(
-      async (tx) => {
-        const outlet = await tx.outlet.findUnique({
-          where: { id: data.outlet_id },
-        });
-        if (!outlet || outlet.is_deleted) {
-          throw new NotFoundException(
-            "Outlet ID tidak ditemukan atau sudah tidak aktif",
-          );
-        }
-        const plan = await tx.salesKanvasPlan.findUnique({
-          where: { id: data.sales_kanvas_plan_id },
-        });
-        if (!plan)
-          throw new NotFoundException(
-            "Rencana Kanvas (Plan ID) tidak ditemukan",
-          );
+  async create(data: CreateInvoiceDto, user: AuthenticatedUser, idempotencyKey?: string) {
+    const payloadHash = hashPayload(data);
+    const maxRetries = 3;
+    let attempt = 0;
 
-        let total_tagihan = 0;
-        const detailRows: Array<{
-          produk_id: number;
-          batch_id: number;
-          qty: number;
-          harga_satuan: number;
-          subtotal: number;
-        }> = [];
-
-        for (const item of data.details) {
-          const product = await tx.product.findUnique({
-            where: { id: item.produk_id },
-          });
-          if (!product)
-            throw new NotFoundException(
-              `Produk ID ${item.produk_id} tidak ditemukan`,
-            );
-          if (!product.is_active) {
-            throw new BadRequestException(
-              `Produk ${product.name} sedang tidak aktif dan tidak dapat dijual.`,
-            );
-          }
-
-          const produkHarga = await tx.produkHarga.findFirst({
-            where: {
-              produk_id: item.produk_id,
-              tipe_harga_id: outlet.tipe_harga_id,
-            },
-          });
-          if (!produkHarga) {
-            throw new BadRequestException(
-              `Harga untuk Produk ID ${item.produk_id} belum diatur untuk tipe harga outlet ini.`,
-            );
-          }
-          const hargaResmi = produkHarga.harga.toNumber();
-
-          const onloadedDetails = await tx.detailProdukOut.findMany({
-            where: {
-              produkOut: {
-                kasbonProduk: { sales_kanvas_plan_id: plan.id },
-                status: { not: "BATAL" }, 
-              },
-              produk_id: item.produk_id,
-            },
-            include: { batch: true },
-          });
-
-          const invoicedDetails = await tx.detailInvoiceOutlet.findMany({
-            where: {
-              invoiceOutlet: {
-                sales_kanvas_plan_id: plan.id,
-                status: { not: "BATAL" }, 
-              },
-              produk_id: item.produk_id,
-            },
-          });
-
-          const sisaPerBatch = new Map<number, number>();
-          for (const out of onloadedDetails) {
-            sisaPerBatch.set(
-              out.batch_id,
-              (sisaPerBatch.get(out.batch_id) || 0) + out.qty,
-            );
-          }
-          for (const inv of invoicedDetails) {
-            sisaPerBatch.set(
-              inv.batch_id,
-              (sisaPerBatch.get(inv.batch_id) || 0) - inv.qty,
-            );
-          }
-
-          let totalSisaBawa = 0;
-          for (const sisa of sisaPerBatch.values()) totalSisaBawa += sisa;
-
-          if (item.qty > totalSisaBawa) {
-            throw new BadRequestException(
-              `Invoice melebihi barang yang dibawa (Onloading). Sisa barang di Sales untuk Produk ID ${item.produk_id}: ${totalSisaBawa}, diminta: ${item.qty}.`,
-            );
-          }
-
-          const sortedBatches = Array.from(sisaPerBatch.entries())
-            .filter(([_, sisa]) => sisa > 0)
-            .map(([batchId, sisa]) => {
-              const batchInfo = onloadedDetails.find(
-                (o) => o.batch_id === batchId,
-              )!.batch;
-              return { batchId, sisa, expired_date: batchInfo.expired_date };
-            })
-            .sort(
-              (a, b) => a.expired_date.getTime() - b.expired_date.getTime(),
-            );
-
-          let remainingQty = item.qty;
-          for (const b of sortedBatches) {
-            if (remainingQty <= 0) break;
-            const take = Math.min(b.sisa, remainingQty);
-            const subtotal = take * hargaResmi;
-
-            total_tagihan += subtotal;
-            detailRows.push({
-              produk_id: item.produk_id,
-              batch_id: b.batchId,
-              qty: take,
-              harga_satuan: hargaResmi,
-              subtotal,
+    while (attempt < maxRetries) {
+      try {
+        const invoice = await this.prisma.$transaction(
+          async (tx) => {
+            const outlet = await tx.outlet.findUnique({
+              where: { id: data.outlet_id },
             });
-            remainingQty -= take;
-          }
-        }
+            if (!outlet || outlet.is_deleted) {
+              throw new NotFoundException(
+                "Outlet ID tidak ditemukan atau sudah tidak aktif",
+              );
+            }
+            const plan = await tx.salesKanvasPlan.findUnique({
+              where: { id: data.sales_kanvas_plan_id },
+            });
+            if (!plan)
+              throw new NotFoundException(
+                "Rencana Kanvas (Plan ID) tidak ditemukan",
+              );
 
-        const newInvoice = await tx.invoiceOutlet.create({
-          data: {
-            outlet_id: data.outlet_id,
-            sales_kanvas_plan_id: data.sales_kanvas_plan_id,
-            tipe_pembayaran: data.tipe_pembayaran,
-            total_tagihan,
-            tgl_invoice: new Date(data.tgl_invoice),
-            status: "DRAFT", 
+            let total_tagihan = 0;
+            const detailRows: Array<{
+              produk_id: number;
+              batch_id: number;
+              qty: number;
+              harga_satuan: number;
+              subtotal: number;
+            }> = [];
+
+            for (const item of data.details) {
+              const product = await tx.product.findUnique({
+                where: { id: item.produk_id },
+              });
+              if (!product)
+                throw new NotFoundException(
+                  `Produk ID ${item.produk_id} tidak ditemukan`,
+                );
+              if (!product.is_active) {
+                throw new BadRequestException(
+                  `Produk ${product.name} sedang tidak aktif dan tidak dapat dijual.`,
+                );
+              }
+
+              const produkHarga = await tx.produkHarga.findFirst({
+                where: {
+                  produk_id: item.produk_id,
+                  tipe_harga_id: outlet.tipe_harga_id,
+                },
+              });
+              if (!produkHarga) {
+                throw new BadRequestException(
+                  `Harga untuk Produk ID ${item.produk_id} belum diatur untuk tipe harga outlet ini.`,
+                );
+              }
+              const hargaResmi = produkHarga.harga.toNumber();
+
+              const onloadedDetails = await tx.detailProdukOut.findMany({
+                where: {
+                  produkOut: {
+                    kasbonProduk: { sales_kanvas_plan_id: plan.id },
+                    status: { not: "BATAL" },
+                  },
+                  produk_id: item.produk_id,
+                },
+                include: { batch: true },
+              });
+
+              const invoicedDetails = await tx.detailInvoiceOutlet.findMany({
+                where: {
+                  invoiceOutlet: {
+                    sales_kanvas_plan_id: plan.id,
+                    status: { not: "BATAL" },
+                  },
+                  produk_id: item.produk_id,
+                },
+              });
+
+              const sisaPerBatch = new Map<number, number>();
+              for (const out of onloadedDetails) {
+                sisaPerBatch.set(
+                  out.batch_id,
+                  (sisaPerBatch.get(out.batch_id) || 0) + out.qty,
+                );
+              }
+              for (const inv of invoicedDetails) {
+                sisaPerBatch.set(
+                  inv.batch_id,
+                  (sisaPerBatch.get(inv.batch_id) || 0) - inv.qty,
+                );
+              }
+
+              let totalSisaBawa = 0;
+              for (const sisa of sisaPerBatch.values()) totalSisaBawa += sisa;
+
+              if (item.qty > totalSisaBawa) {
+                throw new BadRequestException(
+                  `Invoice melebihi barang yang dibawa (Onloading). Sisa barang di Sales untuk Produk ID ${item.produk_id}: ${totalSisaBawa}, diminta: ${item.qty}.`,
+                );
+              }
+
+              const sortedBatches = Array.from(sisaPerBatch.entries())
+                .filter(([_, sisa]) => sisa > 0)
+                .map(([batchId, sisa]) => {
+                  const batchInfo = onloadedDetails.find(
+                    (o) => o.batch_id === batchId,
+                  )!.batch;
+                  return { batchId, sisa, expired_date: batchInfo.expired_date };
+                })
+                .sort(
+                  (a, b) => a.expired_date.getTime() - b.expired_date.getTime(),
+                );
+
+              let remainingQty = item.qty;
+              for (const b of sortedBatches) {
+                if (remainingQty <= 0) break;
+                const take = Math.min(b.sisa, remainingQty);
+                const subtotal = take * hargaResmi;
+
+                total_tagihan += subtotal;
+                detailRows.push({
+                  produk_id: item.produk_id,
+                  batch_id: b.batchId,
+                  qty: take,
+                  harga_satuan: hargaResmi,
+                  subtotal,
+                });
+                remainingQty -= take;
+              }
+            }
+
+            const newInvoice = await tx.invoiceOutlet.create({
+              data: {
+                outlet_id: data.outlet_id,
+                sales_kanvas_plan_id: data.sales_kanvas_plan_id,
+                tipe_pembayaran: data.tipe_pembayaran,
+                total_tagihan,
+                tgl_invoice: new Date(data.tgl_invoice),
+                status: "DRAFT",
+                idempotency_key: idempotencyKey,
+                payload_hash: payloadHash,
+              },
+            });
+
+            for (const row of detailRows) {
+              await tx.detailInvoiceOutlet.create({
+                data: {
+                  invoice_outlet_id: newInvoice.id,
+                  produk_id: row.produk_id,
+                  batch_id: row.batch_id,
+                  qty: row.qty,
+                  harga_satuan: row.harga_satuan,
+                  subtotal: row.subtotal,
+                },
+              });
+            }
+
+            if (data.tipe_pembayaran.toUpperCase() === "KREDIT") {
+              await tx.kartuPiutangOutlet.create({
+                data: {
+                  invoice_outlet_id: newInvoice.id,
+                  sisa_piutang: total_tagihan,
+                  jatuh_tempo: new Date(
+                    new Date().setDate(new Date().getDate() + 30),
+                  ),
+                },
+              });
+            }
+
+            await this.auditLog.log(
+              {
+                user_id: user.id,
+                action: "CREATE_INVOICE",
+                entity: "InvoiceOutlet",
+                entity_id: newInvoice.id,
+                new_values: {
+                  outlet_id: data.outlet_id,
+                  total_tagihan,
+                  tipe_pembayaran: data.tipe_pembayaran,
+                  items_count: detailRows.length,
+                },
+              },
+              tx,
+            );
+
+            return { invoice: newInvoice, outletName: outlet.nama_toko };
           },
-        });
-
-        for (const row of detailRows) {
-          await tx.detailInvoiceOutlet.create({
-            data: {
-              invoice_outlet_id: newInvoice.id,
-              produk_id: row.produk_id,
-              batch_id: row.batch_id,
-              qty: row.qty,
-              harga_satuan: row.harga_satuan,
-              subtotal: row.subtotal,
-            },
-          });
-        }
-
-        if (data.tipe_pembayaran.toUpperCase() === "KREDIT") {
-          await tx.kartuPiutangOutlet.create({
-            data: {
-              invoice_outlet_id: newInvoice.id,
-              sisa_piutang: total_tagihan,
-              jatuh_tempo: new Date(
-                new Date().setDate(new Date().getDate() + 30),
-              ),
-            },
-          });
-        }
-
-        await this.auditLog.log(
-          {
-            user_id: user.id,
-            action: "CREATE_INVOICE",
-            entity: "InvoiceOutlet",
-            entity_id: newInvoice.id,
-            new_values: {
-              outlet_id: data.outlet_id,
-              total_tagihan,
-              tipe_pembayaran: data.tipe_pembayaran,
-              items_count: detailRows.length,
-            },
-          },
-          tx,
+          { isolationLevel: "Serializable" },
         );
 
-        return { invoice: newInvoice, outletName: outlet.nama_toko };
-      },
-      { isolationLevel: "Serializable" },
-    );
+        const actor = await this.prisma.user.findUnique({ where: { id: user.id } });
 
-    const actor = await this.prisma.user.findUnique({ where: { id: user.id } });
-    
-    this.eventEmitter.emit(
-      "invoice.created",
-      new InvoiceCreatedEvent(
-        invoice.invoice.id,
-        invoice.outletName,
-        invoice.invoice.total_tagihan.toNumber(),
-        user.id,
-        actor?.name || "Sales",
-      ),
-    );
+        this.eventEmitter.emit(
+          "invoice.created",
+          new InvoiceCreatedEvent(
+            invoice.invoice.id,
+            invoice.outletName,
+            invoice.invoice.total_tagihan.toNumber(),
+            user.id,
+            actor?.name || "Sales",
+          ),
+        );
 
-    return invoice.invoice;
+        return invoice.invoice;
+      } catch (error: any) {
+        if (idempotencyKey) {
+          const existing = await this.prisma.invoiceOutlet.findUnique({
+            where: { idempotency_key: idempotencyKey },
+            include: {
+              detailInvoiceOutlets: true,
+              kartuPiutangOutlet: true,
+              salesKanvasPlan: true
+            },
+          });
+          if (existing) {
+            const isGlobalRole = ["superadmin", "super admin", "kasir", "supervisor"].includes(user.role.name.toLowerCase());
+            if (!isGlobalRole && existing.salesKanvasPlan?.user_id !== user.id) {
+              throw new NotFoundException("Transaksi tidak ditemukan");
+            }
+            validateReplayPayload(existing.payload_hash, payloadHash);
+            return existing;
+          }
+        }
+
+        if (error.code === 'P2034') {
+          attempt++;
+          if (attempt >= maxRetries) {
+            throw new ServiceUnavailableException("Sistem sedang sibuk (Database Conflict), silakan coba beberapa saat lagi.");
+          }
+          await new Promise((resolve) => setTimeout(resolve, 100 * attempt));
+          continue;
+        }
+        throw error;
+      }
+    }
   }
 
   async findAll() {
     return this.prisma.invoiceOutlet.findMany({
-      where: { status: { not: "BATAL" } }, 
+      where: { status: { not: "BATAL" } },
       include: {
         outlet: true,
         salesKanvasPlan: true,
@@ -246,8 +287,8 @@ export class InvoiceService {
         invoiceReturProduks: { include: { detailInvoiceReturs: true } },
       },
     });
-    
-    if (!invoice || invoice.status === "BATAL") throw new NotFoundException("Invoice tidak ditemukan"); 
+
+    if (!invoice || invoice.status === "BATAL") throw new NotFoundException("Invoice tidak ditemukan");
 
     const roleName = user.role.name.toLowerCase();
     const isGlobalRole = [
@@ -267,12 +308,12 @@ export class InvoiceService {
   async cancel(id: number, user: AuthenticatedUser) {
     const result = await this.prisma.$transaction(async (tx) => {
       const invoice = await tx.invoiceOutlet.findUnique({
-        where: { id, status: { not: "BATAL" } }, 
+        where: { id, status: { not: "BATAL" } },
         include: { kartuPiutangOutlet: true, pembayaranInvoices: true },
       });
 
       if (!invoice) throw new NotFoundException('Invoice tidak ditemukan atau sudah batal');
-      
+
       if (invoice.pembayaranInvoices.length > 0) {
         throw new BadRequestException('Invoice tidak bisa dibatalkan karena sudah ada pembayaran.');
       }
