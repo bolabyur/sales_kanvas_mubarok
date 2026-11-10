@@ -1,7 +1,8 @@
-import { Controller, Get, Post, Body, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, UseInterceptors, Headers } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { KanvasReturnService } from './kanvas-return.service';
 import { CreateKanvasReturnDto } from './dto/kanvas-return.dto';
+import { ReceiveKanvasReturnDto } from './dto/receive-kanvas-return.dto'; 
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permission.guard';
 import { RequirePermission } from '../../common/decorators/require-permission.decorator';
@@ -19,8 +20,24 @@ export class KanvasReturnController {
   @Post()
   @RequirePermission('retur:create')
   @UseInterceptors(IdempotencyInterceptor)
-  create(@Body() dto: CreateKanvasReturnDto, @CurrentUser() user: AuthenticatedUser) {
-    return this.service.create(dto, user.id, '127.0.0.1');
+  create(
+    @Body() dto: CreateKanvasReturnDto, 
+    @CurrentUser() user: AuthenticatedUser,
+    @Headers('x-idempotency-key') key?: string
+  ) {
+    return this.service.create(dto, user.id, '127.0.0.1', key);
+  }
+
+  @Post(':id/receive')
+  @RequirePermission('retur:receive') 
+  @UseInterceptors(IdempotencyInterceptor)
+  receive(
+    @Param('id') id: string,
+    @Body() dto: ReceiveKanvasReturnDto,
+    @CurrentUser() user: AuthenticatedUser,
+    @Headers('x-idempotency-key') key?: string,
+  ) {
+    return this.service.receive(+id, dto, user.id, '127.0.0.1', key);
   }
 
   @Get()
