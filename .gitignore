@@ -1,4 +1,26 @@
+# Dependencies
 node_modules/
+
+# Environment
 .env
+.env.local
+.env.production
+
+# Build & Dist
 dist/
 build/
+coverage/
+
+# Logs
+*.log
+npm-debug.log*
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Prisma
+# (Jangan ignore migrations, tapi ignore SQLite jika ada)
+*.sqlite
