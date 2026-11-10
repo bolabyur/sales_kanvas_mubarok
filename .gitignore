@@ -1,12 +1,12 @@
+# Environment
+.env
+.env.*
+!.env.example
+
 # Dependencies
 node_modules/
 
-# Environment
-.env
-.env.local
-.env.production
-
-# Build & Dist
+# Build Output
 dist/
 build/
 coverage/
@@ -21,6 +21,6 @@ npm-debug.log*
 .DS_Store
 Thumbs.db
 
-# Prisma
-# (Jangan ignore migrations, tapi ignore SQLite jika ada)
-*.sqlite
+# Temp
+tmp/
+temp/
