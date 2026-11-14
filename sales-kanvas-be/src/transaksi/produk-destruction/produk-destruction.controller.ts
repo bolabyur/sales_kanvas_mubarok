@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, UseInterceptors, Headers } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { ProdukDestructionService } from './produk-destruction.service';
 import { CreateDestructionDto } from './dto/produk-destruction.dto';
@@ -17,14 +17,18 @@ export class ProdukDestructionController {
   constructor(private readonly service: ProdukDestructionService) {}
 
   @Post()
-  @RequirePermission('retur:create') 
+  @RequirePermission('produk-destruction:create')
   @UseInterceptors(IdempotencyInterceptor)
-  create(@Body() dto: CreateDestructionDto, @CurrentUser() user: AuthenticatedUser) {
-    return this.service.create(dto, user.id, '127.0.0.1');
+  create(
+    @Body() dto: CreateDestructionDto,
+    @CurrentUser() user: AuthenticatedUser,
+    @Headers('x-idempotency-key') idempotencyKey?: string, 
+  ) {
+    return this.service.create(dto, user.id, '127.0.0.1', idempotencyKey);
   }
 
   @Get()
-  @RequirePermission('retur:read')
+  @RequirePermission('produk-destruction:read')
   findAll() {
     return this.service.findAll();
   }
