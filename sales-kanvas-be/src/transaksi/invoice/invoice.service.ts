@@ -12,6 +12,7 @@ import { EventEmitter2 } from "@nestjs/event-emitter";
 import { InvoiceCreatedEvent } from "./events/invoice-created.event";
 import { InvoiceCancelledEvent } from "./events/invoice-cancelled.event";
 import { hashPayload, validateReplayPayload } from "../../common/utils/idempotency.util";
+import { CodeGeneratorService } from "../../common/services/code-generator.service";
 
 @Injectable()
 export class InvoiceService {
@@ -19,12 +20,55 @@ export class InvoiceService {
     private prisma: PrismaService,
     private auditLog: AuditLogService,
     private eventEmitter: EventEmitter2,
+    private codeGenerator: CodeGeneratorService,
   ) { }
+
+  private isRetryableSerializationError(error: any): boolean {
+    if (error?.code === 'P2034') return true;
+    if (error?.code !== 'P2010') return false;
+    
+    const meta = error?.meta;
+    if (!meta) return false;
+
+    const directCode = typeof meta === 'object' ? (meta.code ?? meta.sqlState) : null;
+    if (directCode === '40001' || directCode === '40P01') return true;
+
+    const nestedCode = meta?.cause?.originalCode || meta?.driverAdapterError?.cause?.originalCode;
+    if (nestedCode === '40001' || nestedCode === '40P01') return true;
+
+    return false;
+  }
+
+  private isGlobalRole(roleName: string): boolean {
+    return ["superadmin", "super admin", "kasir", "supervisor"].includes(
+      roleName.toLowerCase(),
+    );
+  }
 
   async create(data: CreateInvoiceDto, user: AuthenticatedUser, idempotencyKey?: string) {
     const payloadHash = hashPayload(data);
-    const maxRetries = 3;
+    const maxRetries = 15;
     let attempt = 0;
+    const documentDate = new Date();
+
+    if (idempotencyKey) {
+      const existing = await this.prisma.invoiceOutlet.findUnique({
+        where: { idempotency_key: idempotencyKey },
+        include: {
+          detailInvoiceOutlets: true,
+          kartuPiutangOutlet: true,
+          salesKanvasPlan: true,
+        },
+      });
+      if (existing) {
+        if (!this.isGlobalRole(user.role.name) &&
+            existing.salesKanvasPlan?.user_id !== user.id) {
+          throw new NotFoundException("Transaksi tidak ditemukan");
+        }
+        validateReplayPayload(existing.payload_hash, payloadHash);
+        return existing;
+      }
+    }
 
     while (attempt < maxRetries) {
       try {
@@ -59,15 +103,12 @@ export class InvoiceService {
               const product = await tx.product.findUnique({
                 where: { id: item.produk_id },
               });
+              
+              // 🔥 FIX: Hanya cek keberadaan produk, hapus cek is_active
               if (!product)
                 throw new NotFoundException(
                   `Produk ID ${item.produk_id} tidak ditemukan`,
                 );
-              if (!product.is_active) {
-                throw new BadRequestException(
-                  `Produk ${product.name} sedang tidak aktif dan tidak dapat dijual.`,
-                );
-              }
 
               const produkHarga = await tx.produkHarga.findFirst({
                 where: {
@@ -156,10 +197,13 @@ export class InvoiceService {
               }
             }
 
+            const documentNumber = await this.codeGenerator.generate(tx, 'INV', documentDate);
+
             const newInvoice = await tx.invoiceOutlet.create({
               data: {
                 outlet_id: data.outlet_id,
                 sales_kanvas_plan_id: data.sales_kanvas_plan_id,
+                document_number: documentNumber,
                 tipe_pembayaran: data.tipe_pembayaran,
                 total_tagihan,
                 tgl_invoice: new Date(data.tgl_invoice),
@@ -205,6 +249,7 @@ export class InvoiceService {
                   total_tagihan,
                   tipe_pembayaran: data.tipe_pembayaran,
                   items_count: detailRows.length,
+                  document_number: documentNumber,
                 },
               },
               tx,
@@ -236,12 +281,12 @@ export class InvoiceService {
             include: {
               detailInvoiceOutlets: true,
               kartuPiutangOutlet: true,
-              salesKanvasPlan: true
+              salesKanvasPlan: true,
             },
           });
           if (existing) {
-            const isGlobalRole = ["superadmin", "super admin", "kasir", "supervisor"].includes(user.role.name.toLowerCase());
-            if (!isGlobalRole && existing.salesKanvasPlan?.user_id !== user.id) {
+            if (!this.isGlobalRole(user.role.name) &&
+                existing.salesKanvasPlan?.user_id !== user.id) {
               throw new NotFoundException("Transaksi tidak ditemukan");
             }
             validateReplayPayload(existing.payload_hash, payloadHash);
@@ -249,10 +294,12 @@ export class InvoiceService {
           }
         }
 
-        if (error.code === 'P2034') {
+        if (this.isRetryableSerializationError(error)) {
           attempt++;
           if (attempt >= maxRetries) {
-            throw new ServiceUnavailableException("Sistem sedang sibuk (Database Conflict), silakan coba beberapa saat lagi.");
+            throw new ServiceUnavailableException(
+              "Sistem sedang sibuk (Database Conflict), silakan coba beberapa saat lagi.",
+            );
           }
           await new Promise((resolve) => setTimeout(resolve, 100 * attempt));
           continue;
@@ -288,16 +335,11 @@ export class InvoiceService {
       },
     });
 
-    if (!invoice || invoice.status === "BATAL") throw new NotFoundException("Invoice tidak ditemukan");
+    if (!invoice || invoice.status === "BATAL")
+      throw new NotFoundException("Invoice tidak ditemukan");
 
     const roleName = user.role.name.toLowerCase();
-    const isGlobalRole = [
-      "superadmin",
-      "super admin",
-      "kasir",
-      "supervisor",
-    ].includes(roleName);
-    if (!isGlobalRole && roleName.includes("sales")) {
+    if (!this.isGlobalRole(roleName) && roleName.includes("sales")) {
       if (invoice.salesKanvasPlan?.user_id !== user.id) {
         throw new NotFoundException("Invoice tidak ditemukan");
       }

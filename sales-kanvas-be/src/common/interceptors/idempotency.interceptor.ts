@@ -6,6 +6,7 @@ import {
   Logger,
   BadRequestException,
   ConflictException,
+  ServiceUnavailableException,
 } from "@nestjs/common";
 import { Observable, of } from "rxjs";
 import { mergeMap } from "rxjs/operators";
@@ -19,49 +20,32 @@ export class IdempotencyInterceptor implements NestInterceptor {
 
   constructor(private prisma: PrismaService) { }
 
-  async intercept(
-    context: ExecutionContext,
-    next: CallHandler,
-  ): Promise<Observable<any>> {
+  async intercept(context: ExecutionContext, next: CallHandler): Promise<Observable<any>> {
     const request = context.switchToHttp().getRequest();
-
-    if (request.method !== "POST") {
-      return next.handle();
-    }
+    if (request.method !== "POST") return next.handle();
 
     const idempotencyKey = request.headers["x-idempotency-key"];
-    if (!idempotencyKey) {
-      return next.handle();
-    }
+    if (!idempotencyKey) return next.handle();
 
-    // 🔥 TAMBAHKAN SCOPE USER ID
-    const user = request.user; 
-    if (!user) {
-      return next.handle();
-    }
+    const user = request.user;
+    if (!user) return next.handle();
 
     const keyString = String(idempotencyKey);
     if (keyString.length > 255) {
       throw new BadRequestException("Idempotency Key tidak boleh melebihi 255 karakter.");
     }
 
-    // 🔥 HASH KEY + USER ID (Mencegah User B melihat cache User A)
-    const hashedKey = crypto.createHash("sha256").update(`${user.id}-${keyString}`).digest("hex");
+    const endpoint = `${request.method}:${request.route?.path ?? request.path}`;
+    const hashedKey = crypto.createHash("sha256").update(`${user.id}-${endpoint}-${keyString}`).digest("hex");
     const currentPayloadHash = hashPayload(request.body);
 
-    const existingRecord = await this.prisma.idempotencyRecord.findUnique({
-      where: { key: hashedKey },
-    });
+    const existingRecord = await this.prisma.idempotencyRecord.findUnique({ where: { key: hashedKey } });
 
     if (existingRecord) {
-      if (existingRecord.payload_hash !== currentPayloadHash) {
+      if (existingRecord.payload_hash && existingRecord.payload_hash !== currentPayloadHash) {
         throw new ConflictException("Payload berbeda dengan request sebelumnya (Idempotency Conflict).");
       }
-
-      this.logger.debug(`[IDEMPOTENCY-CACHE] Replay: ${hashedKey}`);
-
       context.switchToHttp().getResponse().status(existingRecord.status_code);
-
       return of(existingRecord.response);
     }
 
@@ -79,6 +63,12 @@ export class IdempotencyInterceptor implements NestInterceptor {
             },
           });
         } catch (error: any) {
+          if (error?.code === "P2002") {
+            this.logger.debug(`[IDEMPOTENCY-RACE] Concurrent save for ${hashedKey} — ignored.`);
+          } else {
+            this.logger.error(`[IDEMPOTENCY-FAILED] Gagal menyimpan record key=${hashedKey}`, error?.message);
+            throw new ServiceUnavailableException("Transaksi berhasil, tapi Idempotency record gagal disimpan.");
+          }
         }
         return response;
       }),

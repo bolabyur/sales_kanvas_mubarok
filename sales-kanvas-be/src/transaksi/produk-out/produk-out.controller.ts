@@ -40,6 +40,18 @@ export class ProdukOutController {
     return this.produkOutService.findAll();
   }
 
+  // 🔥 ENDPOINT BARU UNTUK DETAIL
+  @Get(':id')
+  @RequirePermission('produk-out:read')
+  @ApiOperation({ summary: 'Ambil detail Onloading berdasarkan ID' })
+  @ApiParam({ name: 'id', type: Number })
+  findOne(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.produkOutService.findOne(id, user);
+  }
+
   @Post(':id/cancel')
   @RequirePermission('produk-out:update')
   @UseInterceptors(IdempotencyInterceptor)

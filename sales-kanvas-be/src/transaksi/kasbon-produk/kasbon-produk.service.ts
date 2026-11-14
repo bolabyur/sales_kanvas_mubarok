@@ -9,19 +9,59 @@ import { CreateKasbonProdukDto } from "./dto/kasbon-produk.dto";
 import { AuthenticatedUser } from "../../common/interfaces/authenticated-user.interface";
 import { EventEmitter2 } from "@nestjs/event-emitter";
 import { BonCreatedEvent } from "./events/bon-created.event";
-import { hashPayload, isIdempotencyError, validateReplayPayload } from "../../common/utils/idempotency.util";
+import { hashPayload, validateReplayPayload } from "../../common/utils/idempotency.util";
+import { CodeGeneratorService } from "../../common/services/code-generator.service";
 
 @Injectable()
 export class KasbonProdukService {
   constructor(
     private prisma: PrismaService,
     private eventEmitter: EventEmitter2,
+    private codeGenerator: CodeGeneratorService,
   ) {}
+
+  /**
+   * 🔥 FIX: deteksi retryable serialization error (P2034 / P2010).
+   * Diperbarui untuk menangkap kode error dari Prisma v7 Driver Adapter.
+   */
+  private isRetryableSerializationError(error: any): boolean {
+    if (error?.code === 'P2034') return true;
+    if (error?.code !== 'P2010') return false;
+    
+    const meta = error?.meta;
+    if (!meta) return false;
+
+    // 1. Cek properti langsung
+    const directCode = typeof meta === 'object' ? (meta.code ?? meta.sqlState) : null;
+    if (directCode === '40001' || directCode === '40P01') return true;
+
+    // 2. Cek properti bersarang (Prisma v7 Driver Adapter)
+    const nestedCode = meta?.cause?.originalCode || meta?.driverAdapterError?.cause?.originalCode;
+    if (nestedCode === '40001' || nestedCode === '40P01') return true;
+
+    return false;
+  }
 
   async create(data: CreateKasbonProdukDto, userId: number, ip: string, idempotencyKey?: string) {
     const payloadHash = hashPayload(data);
-    const maxRetries = 3;
+    const maxRetries = 15;
     let attempt = 0;
+    const documentDate = new Date();
+
+    // 🔥 FIX 3: Pre-check idempotency SEBELUM retry loop & SEBELUM generator.
+    if (idempotencyKey) {
+      const existing = await this.prisma.kasbonProduk.findUnique({
+        where: { idempotency_key: idempotencyKey },
+        include: { detailKasbonProduks: true },
+      });
+      if (existing) {
+        if (existing.user_id !== userId) {
+          throw new NotFoundException("Transaksi tidak ditemukan");
+        }
+        validateReplayPayload(existing.payload_hash, payloadHash);
+        return existing;
+      }
+    }
 
     while (attempt < maxRetries) {
       try {
@@ -70,9 +110,13 @@ export class KasbonProdukService {
               }
             }
 
+            // 🔥 Generate Nomor BON
+            const documentNumber = await this.codeGenerator.generate(tx, 'BON', documentDate);
+
             const bonProduk = await tx.kasbonProduk.create({
               data: {
                 sales_kanvas_plan_id: data.sales_kanvas_plan_id,
+                document_number: documentNumber,
                 status: "DRAFT",
                 user_id: userId,
                 ip,
@@ -142,6 +186,7 @@ export class KasbonProdukService {
 
         return result.bon;
       } catch (error: any) {
+        // 🔥 Idempotency Replay (race window fallback)
         if (idempotencyKey) {
           const existing = await this.prisma.kasbonProduk.findUnique({
             where: { idempotency_key: idempotencyKey },
@@ -151,19 +196,21 @@ export class KasbonProdukService {
             if (existing.user_id !== userId) {
               throw new NotFoundException("Transaksi tidak ditemukan");
             }
-            
             validateReplayPayload(existing.payload_hash, payloadHash);
             return existing;
           }
         }
 
-        if (error.code === 'P2034') {
+        // 🔥 FIX: retry hanya serialization error yang benar
+        if (this.isRetryableSerializationError(error)) {
           attempt++;
           if (attempt >= maxRetries) {
-            throw new ServiceUnavailableException("Sistem sedang sibuk (Database Conflict), silakan coba beberapa saat lagi.");
+            throw new ServiceUnavailableException(
+              "Sistem sedang sibuk (Database Conflict), silakan coba beberapa saat lagi.",
+            );
           }
           await new Promise((resolve) => setTimeout(resolve, 100 * attempt));
-          continue; 
+          continue;
         }
 
         throw error;

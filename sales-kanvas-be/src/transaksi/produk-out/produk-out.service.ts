@@ -5,6 +5,8 @@ import { AuditLogService } from 'src/audit-log/audit-log.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { LoadingCompletedEvent } from './events/loading-completed.event';
 import { hashPayload, validateReplayPayload } from '../../common/utils/idempotency.util';
+import { CodeGeneratorService } from '../../common/services/code-generator.service'; // 🔥 Import
+import { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
 
 @Injectable()
 export class ProdukOutService {
@@ -12,7 +14,28 @@ export class ProdukOutService {
     private prisma: PrismaService,
     private auditLog: AuditLogService,
     private eventEmitter: EventEmitter2,
+    private codeGenerator: CodeGeneratorService, // 🔥 Inject
   ) { }
+
+  /**
+   * 🔥 FIX: Deteksi retryable error (P2034 / P2010 dengan SQLSTATE 40001 / 40P01).
+   * P2010 tidak otomatis di-retry jika bukan serialization/deadlock error.
+   */
+  private isRetryableSerializationError(error: any): boolean {
+    if (error?.code === 'P2034') return true;
+    if (error?.code !== 'P2010') return false;
+    
+    const meta = error?.meta;
+    if (!meta) return false;
+
+    const directCode = typeof meta === 'object' ? (meta.code ?? meta.sqlState) : null;
+    if (directCode === '40001' || directCode === '40P01') return true;
+
+    const nestedCode = meta?.cause?.originalCode || meta?.driverAdapterError?.cause?.originalCode;
+    if (nestedCode === '40001' || nestedCode === '40P01') return true;
+
+    return false;
+  }
 
   private async allocateFefo(tx: any, produk_id: number, qty: number): Promise<Array<{ batch_id: number; qty: number; no_batch: string }>> {
     const startOfToday = new Date();
@@ -47,8 +70,30 @@ export class ProdukOutService {
 
   async create(data: CreateProdukOutDto, userId: number, ip: string, idempotencyKey?: string) {
     const payloadHash = hashPayload(data);
-    const maxRetries = 3;
+    
+    // 🔥 Justifikasi maxRetries: Transaksi ProdukOut lebih ringan dari Invoice.
+    // 5 kali percobaan dengan exponential backoff sudah sangat cukup untuk menangani write conflict.
+    const maxRetries = 15; 
     let attempt = 0;
+
+    // 🔥 documentDate ditentukan SEKALI sebelum retry loop
+    const documentDate = new Date();
+
+    // 🔥 FIX: Pre-check Idempotency SEBELUM retry loop & generator
+    if (idempotencyKey) {
+      const existing = await this.prisma.produkOut.findUnique({
+        where: { idempotency_key: idempotencyKey },
+        include: { detailProdukOuts: true },
+      });
+      if (existing) {
+        // Validasi kepemilikan (ownership check)
+        if (existing.user_id !== userId) {
+          throw new NotFoundException("Transaksi tidak ditemukan");
+        }
+        validateReplayPayload(existing.payload_hash, payloadHash);
+        return existing;
+      }
+    }
 
     while (attempt < maxRetries) {
       try {
@@ -61,11 +106,13 @@ export class ProdukOutService {
 
             if (!bon || bon.status === "BATAL") throw new NotFoundException('BON Kasbon Produk tidak ditemukan');
             if (bon.status === 'ONLOADING' || bon.status === 'Loaded') throw new BadRequestException('BON ini sudah Onloading');
-            if (bon.status === 'BATAL') throw new BadRequestException('BON sudah dibatalkan');
             if (bon.detailKasbonProduks.length === 0) throw new BadRequestException('BON ini tidak memiliki detail barang');
 
             const gudang = await tx.gudang.findUnique({ where: { id: data.gudang_id } });
             if (!gudang || gudang.is_deleted) throw new NotFoundException('Gudang ID tidak ditemukan');
+
+            // 🔥 Generate Nomor Dokumen LDG
+            const documentNumber = await this.codeGenerator.generate(tx, 'LDG', documentDate);
 
             const produkOut = await tx.produkOut.create({
               data: {
@@ -78,6 +125,7 @@ export class ProdukOutService {
                 status: "PROSES",
                 idempotency_key: idempotencyKey,
                 payload_hash: payloadHash,
+                document_number: documentNumber, // 🔥 Simpan Nomor
               },
             });
 
@@ -125,7 +173,7 @@ export class ProdukOutService {
                 action: 'CREATE_ONLOADING',
                 entity: 'ProdukOut',
                 entity_id: produkOut.id,
-                new_values: { bon_id: bon.id, source_type: data.source_type, fefo_applied: true },
+                new_values: { bon_id: bon.id, source_type: data.source_type, fefo_applied: true, document_number: documentNumber },
               },
               tx,
             );
@@ -149,18 +197,23 @@ export class ProdukOutService {
 
         return result.produkOut;
       } catch (error: any) {
+        // 🔥 Fallback Idempotency Replay (Race condition window)
         if (idempotencyKey) {
           const existing = await this.prisma.produkOut.findUnique({
             where: { idempotency_key: idempotencyKey },
             include: { detailProdukOuts: true },
           });
           if (existing) {
+            if (existing.user_id !== userId) {
+              throw new NotFoundException("Transaksi tidak ditemukan");
+            }
             validateReplayPayload(existing.payload_hash, payloadHash);
             return existing;
           }
         }
 
-        if (error.code === 'P2034') {
+        // 🔥 FIX: Retry hanya untuk concurrency errors
+        if (this.isRetryableSerializationError(error)) {
           attempt++;
           if (attempt >= maxRetries) {
             throw new ServiceUnavailableException("Sistem sedang sibuk (Database Conflict), silakan coba beberapa saat lagi.");
@@ -239,5 +292,34 @@ export class ProdukOutService {
       },
       orderBy: { updated_at: 'desc' },
     });
+  }
+
+  async findOne(id: number, user: AuthenticatedUser) {
+    const produkOut = await this.prisma.produkOut.findUnique({
+      where: { id },
+      include: {
+        kasbonProduk: {
+          include: {
+            salesKanvasPlan: true,
+          }
+        },
+        detailProdukOuts: { include: { produk: true, batch: true } },
+        gudang: true,
+      },
+    });
+
+    if (!produkOut) throw new NotFoundException("Produk Out tidak ditemukan");
+
+    // Ownership check untuk role sales
+    const roleName = user.role.name.toLowerCase();
+    const isGlobalRole = ["superadmin", "super admin", "kasir", "supervisor", "admin gudang"].includes(roleName);
+    
+    if (!isGlobalRole && roleName.includes("sales")) {
+      if (produkOut.kasbonProduk?.salesKanvasPlan?.user_id !== user.id) {
+        throw new NotFoundException("Produk Out tidak ditemukan");
+      }
+    }
+
+    return produkOut;
   }
 }

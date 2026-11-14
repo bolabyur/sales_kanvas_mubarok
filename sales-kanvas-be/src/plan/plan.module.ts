@@ -1,15 +1,14 @@
-import { Module } from "@nestjs/common";
-import { PlanController } from "./plan.controller";
-import { PlanService } from "./plan.service";
-import { PrismaModule } from "../prisma/prisma.module";
-import { AuditLogModule } from "src/audit-log/audit-log.module";
-import { NotificationsModule } from "src/notifications/notifications.module";
-
+import { Module } from '@nestjs/common';
+import { PlanService } from './plan.service';
+import { PlanController } from './plan.controller';
+import { PrismaModule } from '../prisma/prisma.module';
+import { AuditLogModule } from '../audit-log/audit-log.module';
+import { CodeGeneratorModule } from '../common/services/code-generator.module';
 @Module({
   imports: [
-    PrismaModule, 
+    PrismaModule,
     AuditLogModule,
-    NotificationsModule
+    CodeGeneratorModule, 
   ],
   controllers: [PlanController],
   providers: [PlanService],

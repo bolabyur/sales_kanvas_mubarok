@@ -1,5 +1,6 @@
-import { Controller, Get, Post, Body, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, UseInterceptors, Headers, Req } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { Request } from 'express';
 import { ProdukInService } from './produk-in.service';
 import { CreateProdukInDto } from './dto/produk-in.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
@@ -19,12 +20,13 @@ export class ProdukInController {
   @Post()
   @RequirePermission('produk-in:create')
   @UseInterceptors(IdempotencyInterceptor)
-
   create(
     @Body() dto: CreateProdukInDto,
     @CurrentUser() user: AuthenticatedUser,
+    @Req() req: Request,
+    @Headers('x-idempotency-key') idempotencyKey?: string, // 🔥 Tambahan
   ) {
-    return this.produkInService.create(dto, user.id, '127.0.0.1');
+    return this.produkInService.create(dto, user.id, req.ip ?? '127.0.0.1', idempotencyKey);
   }
 
   @Get()

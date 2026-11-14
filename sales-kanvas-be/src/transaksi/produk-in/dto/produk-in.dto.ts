@@ -2,10 +2,11 @@ import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
 export const createProdukInSchema = z.object({
-  sales_kanvas_plan_id: z.number().int().positive(),
+  sales_kanvas_plan_id: z.number().int().positive().optional().nullable(),
   gudang_id: z.number().int().positive(),
   tgl_masuk: z.string().datetime(),
-  source_type: z.enum(['PRODUKSI', 'SALES_KANVAS', 'TOKO', 'RETUR', 'SHOWROOM']), 
+  // 🔥 Hanya 3 sumber sesuai revisi
+  source_type: z.enum(['PRODUKSI', 'SALES_KANVAS', 'TOKO']), 
   details: z.array(
     z.object({
       produk_id: z.number().int().positive(),
@@ -15,6 +16,15 @@ export const createProdukInSchema = z.object({
       kondisi: z.enum(['Bagus', 'Rusak']),
     })
   ).min(1, 'Minimal 1 barang harus diinputkan'),
+}).superRefine((data, ctx) => {
+  // Validasi: Jika SALES_KANVAS, plan_id wajib diisi
+  if (data.source_type === 'SALES_KANVAS' && !data.sales_kanvas_plan_id) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'sales_kanvas_plan_id wajib diisi jika sumber adalah SALES_KANVAS',
+      path: ['sales_kanvas_plan_id'],
+    });
+  }
 });
 
 export class CreateProdukInDto extends createZodDto(createProdukInSchema) {}

@@ -6,6 +6,7 @@ export const PLAN_STATUS = {
   DISETUJUI: 'DISETUJUI',
   LOADING: 'LOADING',
   KOMPLIT: 'KOMPLIT',
+  SELESAI: 'SELESAI',  
   BATAL: 'BATAL',
 };
 

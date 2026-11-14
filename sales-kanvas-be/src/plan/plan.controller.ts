@@ -9,6 +9,7 @@ import {
   UseGuards,
   ParseIntPipe,
   UseInterceptors,
+  Headers,
 } from "@nestjs/common";
 import { ApiTags, ApiBearerAuth } from "@nestjs/swagger";
 import { PlanService } from "./plan.service";
@@ -37,8 +38,12 @@ export class PlanController {
   @Post()
   @RequirePermission("plan:write")
   @ResponseMessage("Plan created successfully")
-  create(@Body() dto: CreatePlanDto, @CurrentUser() user: AuthenticatedUser) {
-    return this.planService.create(dto, user.id, "127.0.0.1");
+  create(
+    @Body() dto: CreatePlanDto, 
+    @CurrentUser() user: AuthenticatedUser,
+    @Headers('x-idempotency-key') idempotencyKey?: string
+  ) {
+    return this.planService.create(dto, user.id, "127.0.0.1", idempotencyKey);
   }
 
   @Get()

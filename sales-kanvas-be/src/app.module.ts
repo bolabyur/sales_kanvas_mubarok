@@ -36,6 +36,7 @@ import { IdempotencyInterceptor } from './common/interceptors/idempotency.interc
 import { AuditLogModule } from './audit-log/audit-log.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { EventEmitterModule } from '@nestjs/event-emitter'
+import { CodeGeneratorModule } from './common/services/code-generator.module';
 
 @Module({
   imports: [
@@ -74,7 +75,8 @@ import { EventEmitterModule } from '@nestjs/event-emitter'
     ProdukDestructionModule,
     SummaryModule,
     AuditLogModule,
-    NotificationsModule
+    NotificationsModule,
+    CodeGeneratorModule,
   ],
   providers: [
     {

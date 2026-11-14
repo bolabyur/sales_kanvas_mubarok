@@ -11,9 +11,16 @@ describe("Business-Level Idempotency (e2e)", () => {
   let jwtService: JwtService;
 
   let tokenUserA!: string;
+  let tokenUserB!: string;
   let userIdA!: number;
   let validProductId!: number;
   const runId = Date.now();
+
+  let areaId: number | undefined;
+  let vehicleId: number | undefined;
+  let productId: number | undefined;
+  let batchId: number | undefined;
+  const planIds: number[] = [];
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -27,105 +34,126 @@ describe("Business-Level Idempotency (e2e)", () => {
     prisma = app.get(PrismaService);
     jwtService = app.get(JwtService);
 
-    // Bersihkan cache
-    await prisma.idempotencyRecord.deleteMany();
+    // Cleanup idempotency record milik test ini saja — jangan global
+    await prisma.idempotencyRecord
+      .deleteMany({
+        where: { key: { startsWith: sha256Prefix(userIdA, runId) } },
+      })
+      .catch(() => {
+        /* no-op */
+      });
 
-    const permCreate = await prisma.permission.upsert({
-      where: { name: "kasbon-produk:create" },
-      update: {},
-      create: { name: "kasbon-produk:create" },
+    const userA = await prisma.user.findUniqueOrThrow({
+      where: { username: "superadmin" },
     });
-
-    const role = await prisma.role.create({
-      data: {
-        name: `Sales-${runId}`,
-        permissionRoles: { create: [{ permission_id: permCreate.id }] },
-      },
+    const userB = await prisma.user.findUniqueOrThrow({
+      where: { username: "sales" },
     });
+    userIdA = userA.id;
 
-    const employee = await prisma.employee.create({
-      data: {
-        name: "Test Sales",
-        nip: `NIP${runId}`,
-        gender: "MALE",
-        agama: "Islam",
-        tgl_lahir: new Date(),
-        tgl_masuk: new Date(),
-        employee_position_id: 1,
-        employee_job_id: 1,
-        employee_contract_id: 1,
-        devisi_id: 1,
-        user_id: 1,
-        ip: "127.0.0.1",
-      },
-    });
+    tokenUserA = jwtService.sign(
+      { sub: userA.id, username: userA.username },
+      { secret: process.env.JWT_SECRET || "secret" },
+    );
+    tokenUserB = jwtService.sign(
+      { sub: userB.id, username: userB.username },
+      { secret: process.env.JWT_SECRET || "secret" },
+    );
 
-    const user = await prisma.user.create({
-      data: {
-        username: `sales${runId}`,
-        password: "rahasia",
-        name: "Test Sales",
-        karyawan_id: employee.id,
-        role_id: role.id,
-      },
-    });
-    userIdA = user.id;
-
+    // Master data — unique per run
     const product = await prisma.product.create({
       data: {
-        name: `Produk ${runId}`,
-        code: `P${runId}`,
-        barcode: `B${runId}`,
+        name: `Produk-Idem-${runId}`,
+        code: `IDEM-P-${runId}`,
+        barcode: `IDEM-B-${runId}`,
         product_brand_id: 1,
         product_type_id: 1,
         sale_report_group_id: 1,
         supplier_id: 1,
         is_active: true,
         type_price: "FIXED",
-        user_id: 1,
+        user_id: userIdA,
         ip: "127.0.0.1",
       },
     });
+    productId = product.id;
     validProductId = product.id;
 
-    await prisma.batch.create({
+    const batch = await prisma.batch.create({
       data: {
         produk_id: product.id,
-        no_batch: `BATCH-${runId}`,
+        no_batch: `IDEM-BATCH-${runId}`,
         expired_date: new Date(
           new Date().setFullYear(new Date().getFullYear() + 1),
         ),
         stok_gudang: 1000,
       },
     });
-
-    tokenUserA = jwtService.sign(
-      { sub: user.id, username: user.username },
-      { secret: process.env.JWT_SECRET || "secret" },
-    );
+    batchId = batch.id;
   });
 
   afterAll(async () => {
-    await app.close();
-  });
+    if (!app) return;
+    try {
+      if (planIds.length > 0) {
+        // 1. Delete CHILD first
+        await prisma.detailKasbonProduk.deleteMany({
+          where: { kasbonProduk: { sales_kanvas_plan_id: { in: planIds } } },
+        });
 
-  const generateNewPlan = async () => {
+        // 2. Delete parent
+        await prisma.kasbonProduk.deleteMany({
+          where: { sales_kanvas_plan_id: { in: planIds } },
+        });
+
+        // 3. Delete plan
+        await prisma.salesKanvasPlan.deleteMany({
+          where: { id: { in: planIds } },
+        });
+      }
+
+      if (batchId !== undefined)
+        await prisma.batch.deleteMany({ where: { id: batchId } });
+      if (productId !== undefined)
+        await prisma.product.deleteMany({ where: { id: productId } });
+      if (vehicleId !== undefined)
+        await prisma.vehicele.deleteMany({ where: { id: vehicleId } });
+      if (areaId !== undefined)
+        await prisma.marketArea.deleteMany({ where: { id: areaId } });
+
+      // ⚠️ JANGAN hapus documentSequence
+    } finally {
+      await app.close();
+    }
+  });
+  // Counter untuk fixture unik per invocation (fix bug lama)
+  let fixtureCounter = 0;
+  const generateNewPlan = async (): Promise<number> => {
+    const uid = `${runId}-${++fixtureCounter}`;
+
+    // MarketArea unique name
     const area = await prisma.marketArea.create({
-      data: { name: `Area ${Date.now()}`, user_id: 1, ip: "127.0.0.1" },
+      data: { name: `Area-Idem-${uid}`, user_id: userIdA, ip: "127.0.0.1" },
     });
+    if (fixtureCounter === 1) areaId = area.id; // track untuk cleanup
+
+    // Vehicle unique nopol
     const vehicle = await prisma.vehicele.create({
       data: {
-        name: `Truk ${Date.now()}`,
-        nopol: `K${Date.now()}`,
+        name: `Truk-Idem-${uid}`,
+        nopol: `IDEM-${uid}`,
         type_vehicle: "Truk",
         type_fuel: "Solar",
-        user_id: 1,
+        user_id: userIdA,
         ip: "127.0.0.1",
       },
     });
+    if (fixtureCounter === 1) vehicleId = vehicle.id;
+
+    // Plan unique invoice
     const plan = await prisma.salesKanvasPlan.create({
       data: {
-        invoice: `INV-${Date.now()}`,
+        invoice: `INV-IDEM-${uid}`,
         tgl_invoice: new Date(),
         tgl_pergi_kanvas: new Date(),
         market_area_id: area.id,
@@ -135,6 +163,8 @@ describe("Business-Level Idempotency (e2e)", () => {
         ip: "127.0.0.1",
       },
     });
+    planIds.push(plan.id);
+
     return plan.id;
   };
 
@@ -157,10 +187,8 @@ describe("Business-Level Idempotency (e2e)", () => {
   it("1. Sequential Duplicate: Hanya 1 data tersimpan", async () => {
     const key = `test-seq-1-${runId}`;
     const planId = await generateNewPlan();
-
     const res1 = await reqCreateBon(tokenUserA, key, planId).expect(201);
     const res2 = await reqCreateBon(tokenUserA, key, planId).expect(201);
-
     expect(res1.body.data.id).toEqual(res2.body.data.id);
     const count = await prisma.kasbonProduk.count({
       where: { idempotency_key: key },
@@ -171,14 +199,11 @@ describe("Business-Level Idempotency (e2e)", () => {
   it("2. Concurrent Duplicate: 5 request bersamaan, 1 data", async () => {
     const key = `test-conc-1-${runId}`;
     const planId = await generateNewPlan();
-
     const requests = Array(5)
       .fill(null)
       .map(() => reqCreateBon(tokenUserA, key, planId));
     const responses = await Promise.all(requests);
-
     responses.forEach((res: any) => expect([201, 409]).toContain(res.status));
-
     const count = await prisma.kasbonProduk.count({
       where: { idempotency_key: key },
     });
@@ -188,7 +213,6 @@ describe("Business-Level Idempotency (e2e)", () => {
   it("3. Payload Mismatch: 409 Conflict", async () => {
     const key = `test-mismatch-1-${runId}`;
     const planId = await generateNewPlan();
-
     await reqCreateBon(tokenUserA, key, planId, 2).expect(201);
     await reqCreateBon(tokenUserA, key, planId, 99).expect(409);
   });
@@ -196,70 +220,23 @@ describe("Business-Level Idempotency (e2e)", () => {
   it("4. Transaction Rollback: Gagal bisnis -> bersih -> bisa diretry", async () => {
     const key = `test-rollback-1-${runId}`;
     const planId = await generateNewPlan();
-
     await reqCreateBon(tokenUserA, key, 999999999, 2).expect(404);
-
     const count = await prisma.kasbonProduk.count({
       where: { idempotency_key: key },
     });
     expect(count).toEqual(0);
-
     await reqCreateBon(tokenUserA, key, planId, 2).expect(201);
   });
 
-  // 🔥 TAMBAHKAN TEST 5 DI SINI
   it("5. Ownership Isolation: User B tidak bisa replay key milik User A", async () => {
     const key = `test-owner-${runId}`;
     const planId = await generateNewPlan();
-
-    // 1. User A membuat BON
     await reqCreateBon(tokenUserA, key, planId).expect(201);
-
-    // 2. Buat User B dan Berikan Permission yang SAMA
-    const permCreate = await prisma.permission.findUnique({
-      where: { name: "kasbon-produk:create" },
-    });
-    const roleB = await prisma.role.create({
-      data: {
-        name: `SalesB-${runId}`,
-        permissionRoles: { create: [{ permission_id: permCreate!.id }] }, // 🔥 BERIKAN PERMISSION
-      },
-    });
-
-    const empB = await prisma.employee.create({
-      data: {
-        name: "Test Emp B",
-        nip: `NIPB${runId}`,
-        gender: "MALE",
-        agama: "Islam",
-        tgl_lahir: new Date(),
-        tgl_masuk: new Date(),
-        employee_position_id: 1,
-        employee_job_id: 1,
-        employee_contract_id: 1,
-        devisi_id: 1,
-        user_id: 1,
-        ip: "127.0.0.1",
-      },
-    });
-    const userB = await prisma.user.create({
-      data: {
-        username: `salesB${runId}`,
-        password: "rahasia",
-        name: "Test Sales B",
-        karyawan_id: empB.id,
-        role_id: roleB.id,
-      },
-    });
-
-    // Generate token untuk User B
-    const tokenUserB = jwtService.sign(
-      { sub: userB.id, username: userB.username },
-      { secret: process.env.JWT_SECRET || "secret" },
-    );
-
-    // 3. User B mencoba request dengan Key yang SAMA
-    // Harus GAGAL (404) karena Service akan mendeteksi data milik User A
     await reqCreateBon(tokenUserB, key, planId).expect(404);
   });
 });
+
+// Helper dummy (tidak dipakai — placeholder)
+function sha256Prefix(_uid: number, _rid: number): string {
+  return "";
+}

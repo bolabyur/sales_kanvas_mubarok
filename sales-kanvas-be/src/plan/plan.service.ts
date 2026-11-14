@@ -3,6 +3,7 @@ import {
   BadRequestException,
   NotFoundException,
   ForbiddenException,
+  ServiceUnavailableException,
 } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
@@ -18,6 +19,8 @@ import { EventEmitter2 } from "@nestjs/event-emitter";
 import { PlanApprovedEvent } from "./events/plan-approved.event";
 import { PlanCreatedEvent } from "./events/plan-created.event";
 import { AuthenticatedUser } from "src/common/interfaces/authenticated-user.interface";
+import { CodeGeneratorService } from "../common/services/code-generator.service";
+import { hashPayload, validateReplayPayload } from "../common/utils/idempotency.util";
 
 @Injectable()
 export class PlanService {
@@ -25,63 +28,107 @@ export class PlanService {
     private prisma: PrismaService,
     private auditLog: AuditLogService,
     private eventEmitter: EventEmitter2,
+    private codeGenerator: CodeGeneratorService,
   ) {}
 
-  async create(data: CreatePlanDto, userId: number, ip: string) {
-    const market = await this.prisma.marketArea.findUnique({
-      where: { id: data.market_area_id },
-    });
-    if (!market) throw new BadRequestException("Market Area ID tidak ditemukan");
+  async create(data: CreatePlanDto, userId: number, ip: string, idempotencyKey?: string) {
+    const payloadHash = hashPayload(data);
+    const maxRetries = 15;
+    let attempt = 0;
+    
+    const documentDate = new Date();
 
-    const vehicle = await this.prisma.vehicele.findUnique({
-      where: { id: data.vehicle_id },
-    });
-    if (!vehicle) throw new BadRequestException("Kendaraan ID tidak ditemukan");
+    while (attempt < maxRetries) {
+      try {
+        const plan = await this.prisma.$transaction(async (tx) => {
+          const market = await tx.marketArea.findUnique({
+            where: { id: data.market_area_id },
+          });
+          if (!market) throw new BadRequestException("Market Area ID tidak ditemukan");
 
-    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-    const uniqueSuffix = `${Date.now().toString().slice(-6)}${Math.floor(Math.random() * 1000).toString().padStart(3, "0")}`;
-    const invoice = `SKS-${dateStr}-${uniqueSuffix}`;
+          const vehicle = await tx.vehicele.findUnique({
+            where: { id: data.vehicle_id },
+          });
+          if (!vehicle) throw new BadRequestException("Kendaraan ID tidak ditemukan");
 
-    const personils = data.salesKanvasPersonil.map((p) => ({ ...p, user_id: userId, ip }));
-    const materials = data.salesKanvasKasbonMaterial?.map((m) => ({ ...m, user_id: userId, ip }));
+          const invoiceNumber = await this.codeGenerator.generate(tx, 'PLN', documentDate);
 
-    const plan = await this.prisma.salesKanvasPlan.create({
-      data: {
-        invoice,
-        tgl_invoice: new Date(data.tgl_invoice),
-        tgl_pergi_kanvas: new Date(data.tgl_pergi_kanvas),
-        tgl_kembali_kanvas: data.tgl_kembali_kanvas ? new Date(data.tgl_kembali_kanvas) : null,
-        market_area_id: data.market_area_id,
-        vehicle_id: data.vehicle_id,
-        note: data.note,
-        status: PLAN_STATUS.DRAFT,
-        user_id: userId,
-        ip: ip,
-        salesKanvasPersonil: { create: personils },
-        salesKanvasPlanDetail: { create: data.salesKanvasPlanDetail },
-        salesKanvasKasbonMaterial: materials ? { create: materials } : undefined,
-      },
-      include: {
-        salesKanvasPersonil: { include: { employee: true } },
-        salesKanvasPlanDetail: { include: { product: true } },
-      },
-    });
+          const personils = data.salesKanvasPersonil.map((p) => ({ ...p, user_id: userId, ip }));
+          const materials = data.salesKanvasKasbonMaterial?.map((m) => ({ ...m, user_id: userId, ip }));
 
-    await this.auditLog.log({
-      user_id: userId,
-      action: "CREATE_PLAN",
-      entity: "SalesKanvasPlan",
-      entity_id: String(plan.id),
-      new_values: { invoice: plan.invoice, status: plan.status },
-    });
+          const newPlan = await tx.salesKanvasPlan.create({
+            data: {
+              invoice: invoiceNumber, 
+              tgl_invoice: new Date(data.tgl_invoice),
+              tgl_pergi_kanvas: new Date(data.tgl_pergi_kanvas),
+              tgl_kembali_kanvas: data.tgl_kembali_kanvas ? new Date(data.tgl_kembali_kanvas) : null,
+              market_area_id: data.market_area_id,
+              vehicle_id: data.vehicle_id,
+              note: data.note,
+              status: PLAN_STATUS.DRAFT,
+              user_id: userId,
+              ip: ip,
+              idempotency_key: idempotencyKey, 
+              payload_hash: payloadHash,      
+              salesKanvasPersonil: { create: personils },
+              salesKanvasPlanDetail: { create: data.salesKanvasPlanDetail },
+              salesKanvasKasbonMaterial: materials ? { create: materials } : undefined,
+            },
+            include: {
+              salesKanvasPersonil: { include: { employee: true } },
+              salesKanvasPlanDetail: { include: { product: true } },
+            },
+          });
 
-    const actor = await this.prisma.user.findUnique({ where: { id: userId } });
-    this.eventEmitter.emit(
-      "plan.created",
-      new PlanCreatedEvent(plan.id, plan.invoice, userId, actor?.name || "Sales")
-    );
+          return newPlan;
+        }, { isolationLevel: 'Serializable' });
 
-    return plan;
+        await this.auditLog.log({
+          user_id: userId,
+          action: "CREATE_PLAN",
+          entity: "SalesKanvasPlan",
+          entity_id: String(plan.id),
+          new_values: { invoice: plan.invoice, status: plan.status },
+        });
+
+        const actor = await this.prisma.user.findUnique({ where: { id: userId } });
+        this.eventEmitter.emit(
+          "plan.created",
+          new PlanCreatedEvent(plan.id, plan.invoice, userId, actor?.name || "Sales")
+        );
+
+        return plan;
+
+      } catch (error: any) {
+        if (idempotencyKey) {
+          const existing = await this.prisma.salesKanvasPlan.findUnique({
+            where: { idempotency_key: idempotencyKey },
+            include: {
+              salesKanvasPersonil: { include: { employee: true } },
+              salesKanvasPlanDetail: { include: { product: true } },
+            },
+          });
+          if (existing) {
+            validateReplayPayload(existing.payload_hash, payloadHash);
+            return existing;
+          }
+        }
+
+        const isSerializationError = 
+          error.code === 'P2034' || 
+          (error.code === 'P2010' && JSON.stringify(error.meta).includes('40001'));
+
+        if (isSerializationError) {
+          attempt++;
+          if (attempt >= maxRetries) {
+            throw new ServiceUnavailableException("Sistem sedang sibuk (Database Conflict), silakan coba beberapa saat lagi.");
+          }
+          await new Promise((resolve) => setTimeout(resolve, 100 * attempt));
+          continue;
+        }
+        throw error;
+      }
+    }
   }
 
   async findAll(query: FindAllPlanDto, user: AuthenticatedUser) {
@@ -179,7 +226,7 @@ export class PlanService {
     const plan = await this.findOne(id);
 
     if (plan.status === PLAN_STATUS.BATAL) throw new BadRequestException("Plan sudah dibatalkan.");
-    if (plan.status === PLAN_STATUS.KOMPLIT) throw new BadRequestException("Plan sudah selesai.");
+    if (plan.status === PLAN_STATUS.SELESAI) throw new BadRequestException("Plan sudah selesai.");
 
     if (data.status === PLAN_STATUS.DISETUJUI) {
       const user = await this.prisma.user.findUnique({ where: { id: userId }, include: { role: true } });
@@ -191,7 +238,6 @@ export class PlanService {
 
     if (data.status === PLAN_STATUS.BATAL) {
       const result = await this.prisma.$transaction(async (tx) => {
-        // ✅ Cek status ProdukOut (Pengeluaran Barang)
         const produkOutAktif = await tx.produkOut.count({
           where: {
             kasbonProduk: { sales_kanvas_plan_id: id },
@@ -203,7 +249,6 @@ export class PlanService {
           throw new BadRequestException("Barang sudah dikeluarkan dan sedang diproses. Batalkan Invoice Pengeluaran (ProdukOut) terlebih dahulu.");
         }
 
-        // Update BON yang belum diproses menjadi BATAL
         await tx.kasbonProduk.updateMany({
           where: {
             sales_kanvas_plan_id: id,

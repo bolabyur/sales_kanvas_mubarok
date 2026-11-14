@@ -193,7 +193,7 @@ model KanvasKasbonMaterialType {
 
 model SalesKanvasPlan {
   id                 Int       @id @default(autoincrement())
-  invoice            String
+  invoice            String    @unique 
   tgl_invoice        DateTime
   tgl_pergi_kanvas   DateTime
   tgl_kembali_kanvas DateTime?
@@ -201,6 +201,8 @@ model SalesKanvasPlan {
   vehicle_id         Int
   status             String
   note               String?
+  idempotency_key    String?   @unique
+  payload_hash       String?
 
   revision     Int       @default(0)
   revisi_to    String?
@@ -429,6 +431,7 @@ model KasbonProduk {
   id                   Int      @id @default(autoincrement())
   uuid                 String   @unique @default(uuid())
   sales_kanvas_plan_id Int      @unique
+  document_number      String?  @unique
   status               String   @default("Pending")
   user_id              Int      @default(1)
   ip                   String   @default("127.0.0.1")
@@ -477,6 +480,7 @@ model ProdukOut {
   updated_at       DateTime @updatedAt
   idempotency_key String? @unique
   payload_hash    String?
+  document_number  String?           @unique
 
   kasbonProduk     KasbonProduk      @relation(fields: [kasbon_produk_id], references: [id])
   gudang           Gudang            @relation(fields: [gudang_id], references: [id])
@@ -508,6 +512,7 @@ model InvoiceOutlet {
   uuid                 String   @unique @default(uuid())
   outlet_id            Int
   sales_kanvas_plan_id Int
+  document_number      String?  @unique 
   tipe_pembayaran      String
   total_tagihan        Decimal  @db.Decimal(15, 2)
   tgl_invoice          DateTime
@@ -611,6 +616,7 @@ model PembayaranInvoice {
   id                Int      @id @default(autoincrement())
   uuid              String   @unique @default(uuid())
   invoice_outlet_id Int
+  document_number   String?  @unique
   nominal_bayar     Decimal  @db.Decimal(15, 2)
   tipe_bayar        String
   tgl_bayar         DateTime
@@ -619,6 +625,7 @@ model PembayaranInvoice {
   updated_at        DateTime @updatedAt
   idempotency_key String? @unique
   payload_hash    String?
+  
 
   invoiceOutlet InvoiceOutlet @relation(fields: [invoice_outlet_id], references: [id])
 
@@ -644,7 +651,7 @@ model AlokasiReturPiutang {
 model ProdukIn {
   id                   Int      @id @default(autoincrement())
   uuid                 String   @unique @default(uuid())
-  sales_kanvas_plan_id Int
+  sales_kanvas_plan_id Int?
   gudang_id            Int
   tgl_masuk            DateTime
   source_type          String?
@@ -654,7 +661,11 @@ model ProdukIn {
   sync_status          String   @default("Pending")
   updated_at           DateTime @updatedAt
 
-  salesKanvasPlan SalesKanvasPlan  @relation(fields: [sales_kanvas_plan_id], references: [id])
+  document_number      String?  @unique
+  idempotency_key      String?  @unique
+  payload_hash         String?
+
+  salesKanvasPlan SalesKanvasPlan? @relation(fields: [sales_kanvas_plan_id], references: [id])
   gudang          Gudang           @relation(fields: [gudang_id], references: [id])
   detailProdukIns DetailProdukIn[]
 
@@ -707,10 +718,17 @@ model Settlement {
   total_piutang_baru     Decimal  @default(0) @db.Decimal(15, 2)
   total_kasbon_realisasi Decimal  @default(0) @db.Decimal(15, 2)
   selisih_kas            Decimal  @default(0) @db.Decimal(15, 2)
+  uang_fisik_diterima    Decimal? @db.Decimal(15, 2)   
   status                 String   @default("Draft")
   approved_by            Int?
+  user_id                Int?                           
+  tgl_settlement         DateTime?                     
+  document_number        String?  @unique              
+  idempotency_key        String?  @unique                
+  payload_hash           String?                         
   is_deleted             Boolean  @default(false)
   sync_status            String   @default("Pending")
+  created_at             DateTime @default(now())      
   updated_at             DateTime @updatedAt
 
   salesKanvasPlan SalesKanvasPlan @relation(fields: [sales_kanvas_plan_id], references: [id])
@@ -734,6 +752,8 @@ model KanvasReturn {
 
   idempotency_key      String?  @unique
   payload_hash         String?
+
+  document_number      String?  @unique
 
   salesKanvasPlan SalesKanvasPlan      @relation(fields: [sales_kanvas_plan_id], references: [id])
   gudangTujuan    Gudang               @relation(fields: [gudang_tujuan_id], references: [id])
@@ -791,6 +811,10 @@ model ProdukDestruction {
   is_deleted      Boolean  @default(false)
   sync_status     String   @default("Pending")
   updated_at      DateTime @updatedAt
+
+  idempotency_key String?  @unique
+  payload_hash    String?
+  document_number String?  @unique 
 
   gudang  Gudang                    @relation(fields: [gudang_id], references: [id])
   details ProdukDestructionDetail[]
@@ -856,4 +880,14 @@ model Notification {
 
   @@index([user_id, is_read])
   @@map("notifications")
+}
+
+model DocumentSequence {
+  id          Int      @id @default(autoincrement())
+  prefix      String
+  date_key    String   // Format: YYMMDD (Contoh: 261112)
+  last_number Int      @default(0)
+
+  @@unique([prefix, date_key])
+  @@map("document_sequence")
 }
