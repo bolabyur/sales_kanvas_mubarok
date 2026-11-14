@@ -1,11 +1,11 @@
-import { 
-  Controller, 
-  Get, 
-  Post, 
-  Body, 
-  Query, 
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Query,
   UseGuards,
-  ParseIntPipe
+  Headers,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { SettlementService } from './settlement.service';
@@ -28,10 +28,11 @@ export class SettlementController {
   @RequirePermission('settlement:write')
   @ResponseMessage('Settlement berhasil dibuat')
   create(
-    @Body() dto: CreateSettlementDto, 
-    @CurrentUser() user: AuthenticatedUser 
+    @Body() dto: CreateSettlementDto,
+    @Headers('x-idempotency-key') idempotencyKey: string | undefined,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.settlementService.create(dto, user.id); 
+    return this.settlementService.create(dto, user.id, idempotencyKey);
   }
 
   @Get()
